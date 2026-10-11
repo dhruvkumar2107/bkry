@@ -9,3 +9,4 @@ server/prisma/*.db-journal
 server/uploads/*
 !server/uploads/.gitkeep
 client/dist/
+.vercel/
