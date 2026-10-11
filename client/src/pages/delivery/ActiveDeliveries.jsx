@@ -14,10 +14,11 @@ export default function ActiveDeliveries() {
 
   useEffect(() => {
     load();
+    const poll = setInterval(load, 15000);
     const socket = getSocket();
     const onStatus = () => load();
     socket.on('order:status', onStatus);
-    return () => socket.off('order:status', onStatus);
+    return () => { clearInterval(poll); socket.off('order:status', onStatus); };
   }, []);
 
   if (loading) return <PageLoader />;

@@ -9,20 +9,19 @@ import { ApiError } from '../utils/http.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const UPLOAD_DIR = path.resolve(__dirname, '../../uploads');
 
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// The directory may not be writable in serverless environments (read-only
+// filesystem). Creating it is best-effort; local driver writes happen at
+// request time and are only used off-serverless.
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+} catch { /* read-only filesystem (e.g. Vercel) */ }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
-  },
-});
-
+// Keep uploads in memory so both the local driver and Cloudinary can work
+// regardless of filesystem permissions.
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 
 export const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED.includes(file.mimetype)) cb(null, true);
@@ -38,8 +37,8 @@ const signCloudinary = (params, secret) => {
   return crypto.createHash('sha1').update(toSign + secret).digest('hex');
 };
 
-// Uploads a local temp file to Cloudinary via REST API (no SDK dependency).
-const uploadToCloudinary = async (filePath) => {
+// Uploads an in-memory image buffer to Cloudinary via REST API (no SDK).
+const uploadToCloudinary = async (buffer, originalname) => {
   const { cloudName, apiKey, apiSecret } = env.cloudinary;
   if (!cloudName || !apiKey || !apiSecret) {
     throw new ApiError(500, 'Cloudinary credentials are not configured');
@@ -48,9 +47,8 @@ const uploadToCloudinary = async (filePath) => {
   const params = { folder: 'chotulal', timestamp };
   const signature = signCloudinary(params, apiSecret);
 
-  const buffer = fs.readFileSync(filePath);
   const form = new FormData();
-  form.append('file', new Blob([buffer]), path.basename(filePath));
+  form.append('file', new Blob([buffer]), path.basename(originalname || 'upload'));
   form.append('api_key', apiKey);
   form.append('timestamp', String(timestamp));
   form.append('folder', 'chotulal');
@@ -69,9 +67,11 @@ const uploadToCloudinary = async (filePath) => {
 // Driver "local" serves from /uploads; "cloudinary" pushes to object storage.
 export const persistUpload = async (file) => {
   if (env.storageDriver === 'cloudinary') {
-    const url = await uploadToCloudinary(file.path);
-    fs.unlink(file.path, () => {});
-    return url;
+    return uploadToCloudinary(file.buffer, file.originalname);
   }
-  return `${env.publicBaseUrl}/uploads/${file.filename}`;
+  const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
+  const filename = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  fs.writeFileSync(path.join(UPLOAD_DIR, filename), file.buffer);
+  return `${env.publicBaseUrl}/uploads/${filename}`;
 };

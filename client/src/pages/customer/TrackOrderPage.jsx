@@ -32,6 +32,7 @@ export default function TrackOrderPage() {
 
   useEffect(() => {
     if (!order) return undefined;
+    const poll = setInterval(load, 15000);
     const socket = getSocket();
     socket.emit('order:subscribe', order.id);
     const onStatus = (p) => { if (p.orderId === order.id) load(); };
@@ -41,7 +42,7 @@ export default function TrackOrderPage() {
     };
     socket.on('order:status', onStatus);
     socket.on('delivery:location', onLocation);
-    return () => { socket.emit('order:unsubscribe', order.id); socket.off('order:status', onStatus); socket.off('delivery:location', onLocation); };
+    return () => { clearInterval(poll); socket.emit('order:unsubscribe', order.id); socket.off('order:status', onStatus); socket.off('delivery:location', onLocation); };
   }, [order?.id]); // eslint-disable-line
 
   const markers = useMemo(() => {

@@ -15,10 +15,11 @@ export default function AssignedDeliveries() {
 
   useEffect(() => {
     load();
+    const poll = setInterval(load, 15000);
     const socket = getSocket();
     const onNew = () => load();
     socket.on('order:new', onNew);
-    return () => socket.off('order:new', onNew);
+    return () => { clearInterval(poll); socket.off('order:new', onNew); };
   }, []);
 
   const accept = async (id) => {

@@ -1,14 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.resolve(__dirname, '../uploads');
-const SEED_DIR = path.join(UPLOAD_DIR, 'seed');
-if (!fs.existsSync(SEED_DIR)) fs.mkdirSync(SEED_DIR, { recursive: true });
 
 const PALETTES = {
   sweet: ['#0f766e', '#f59e0b'],
@@ -18,26 +11,13 @@ const PALETTES = {
   veg: ['#15803d', '#84cc16'],
 };
 
-// Generates an original branded SVG placeholder. These are clearly-refreshable
-// development images - the shop owner replaces them from the admin panel.
-const writeImage = (slug, label, palette = 'sweet', emoji = '🍬') => {
-  const [c1, c2] = PALETTES[palette];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="${c1}"/>
-      <stop offset="100%" stop-color="${c2}"/>
-    </linearGradient>
-  </defs>
-  <rect width="800" height="600" fill="url(#g)"/>
-  <circle cx="640" cy="140" r="180" fill="#ffffff" opacity="0.08"/>
-  <circle cx="140" cy="500" r="140" fill="#ffffff" opacity="0.08"/>
-  <text x="400" y="290" font-size="150" text-anchor="middle" dominant-baseline="middle">${emoji}</text>
-  <text x="400" y="430" font-size="46" font-family="Georgia, serif" font-weight="700" fill="#ffffff" text-anchor="middle">${label}</text>
-  <text x="400" y="500" font-size="26" font-family="Arial, sans-serif" fill="#ffffff" opacity="0.85" text-anchor="middle">Chotulal Sweets · Bijapur</text>
-</svg>`;
-  fs.writeFileSync(path.join(SEED_DIR, `${slug}.svg`), svg, 'utf8');
-  return `/uploads/seed/${slug}.svg`;
+// Returns a URL to an on-the-fly branded SVG placeholder served by the API.
+// Works on any host (including serverless) with no filesystem or storage
+// dependency; the shop owner replaces these with real photos from the admin.
+const imageUrl = (slug, label, palette = 'sweet', emoji = '\u{1F36C}') => {
+  const [c1, c2] = PALETTES[palette] || PALETTES.sweet;
+  const q = new URLSearchParams({ label, emoji, c1, c2 });
+  return `/api/placeholder/${slug}.svg?${q.toString()}`;
 };
 
 const CATEGORIES = [
@@ -176,15 +156,15 @@ async function main() {
   // --- Categories ----------------------------------------------------------
   const catMap = {};
   for (const [i, c] of CATEGORIES.entries()) {
-    const imageUrl = writeImage(`cat-${c.slug}`, c.name, c.palette, c.emoji);
+    const image = imageUrl(`cat-${c.slug}`, c.name, c.palette, c.emoji);
     const cat = await prisma.category.upsert({
       where: { slug: c.slug },
-      update: { name: c.name, imageUrl, icon: c.icon, sortOrder: i, isActive: true, showOnHome: true },
+      update: { name: c.name, imageUrl: image, icon: c.icon, sortOrder: i, isActive: true, showOnHome: true },
       create: {
         name: c.name,
         slug: c.slug,
         description: c.desc,
-        imageUrl,
+        imageUrl: image,
         icon: c.icon,
         sortOrder: i,
         isActive: true,
@@ -200,7 +180,7 @@ async function main() {
     const slug = slugify(p.name);
     const categories = Array.isArray(p.cat) ? p.cat : [p.cat];
     const palette = CATEGORIES.find((c) => c.slug === categories[0])?.palette || 'sweet';
-    const imageUrl = writeImage(`p-${slug}`, p.name, palette, p.emoji);
+    const image = imageUrl(`p-${slug}`, p.name, palette, p.emoji);
     const variants = buildVariants(p);
     const basePrice = variants[0].price;
     const originalPrice = variants[0].originalPrice || null;
@@ -239,7 +219,7 @@ async function main() {
         isActive: true,
         sortOrder: i,
         categories: { create: categories.map((slugName) => ({ categoryId: catMap[slugName] })) },
-        images: { create: [{ url: imageUrl, alt: p.name, sortOrder: 0 }] },
+        images: { create: [{ url: image, alt: p.name, sortOrder: 0 }] },
         variants: { create: variants },
       },
     });
@@ -256,13 +236,13 @@ async function main() {
   ];
   await prisma.homepageBanner.deleteMany();
   for (const [i, b] of bannerData.entries()) {
-    const imageUrl = writeImage(`banner-${i}`, b.title, b.palette, b.emoji);
+    const image = imageUrl(`banner-${i}`, b.title, b.palette, b.emoji);
     await prisma.homepageBanner.create({
       data: {
         title: b.title,
         subtitle: b.subtitle,
         description: b.description,
-        imageUrl,
+        imageUrl: image,
         ctaLabel: b.ctaLabel,
         ctaLink: b.ctaLink,
         sortOrder: i,

@@ -118,22 +118,19 @@ Key variables:
 `DATABASE_URL="file:./dev.db"`. Schema lives at `server/prisma/schema.prisma`.
 
 ### Production (PostgreSQL)
-1. In `server/prisma/schema.prisma`, change the datasource provider:
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-2. Set `DATABASE_URL` to your Postgres connection string.
-3. Create the schema:
-   ```bash
-   npm --prefix server run migrate         # local dev: creates a migration
-   # or, for an existing production DB:
-   npm --prefix server run migrate:deploy
-   ```
+The repo ships a ready-to-use Postgres schema at `server/prisma/schema.postgres.prisma` (same models, `provider = "postgresql"` plus serverless-friendly Prisma binary targets). You do **not** need to edit `schema.prisma`.
 
-Seeding is idempotent-ish (upserts catalogue) and writes placeholder SVGs to `server/uploads/seed/`; replace them with real photos via the admin uploader.
+1. Provision Postgres (Neon, Supabase, Vercel Postgres, RDS, …).
+2. Set `DATABASE_URL` to the connection string (use the **pooled** string for serverless; append `&pgbouncer=true&connection_limit=1` when using PgBouncer, e.g. Neon/Supabase poolers).
+3. Create the schema + seed:
+   ```bash
+   npm --prefix server run vercel:db
+   ```
+   This runs `prisma generate` + `prisma db push` against `schema.postgres.prisma` and then seeds demo data.
+
+> Keep `schema.prisma` (SQLite) and `schema.postgres.prisma` (Postgres) in sync when you change models.
+
+Seeding is idempotent-ish (upserts the catalogue). Demo images are served on the fly by `/api/placeholder/*.svg`, so they work on any host with no storage; replace them with real photos via the admin uploader (stored in Cloudinary).
 
 ---
 
@@ -141,13 +138,17 @@ Seeding is idempotent-ish (upserts catalogue) and writes placeholder SVGs to `se
 
 ```
 chotulal/
-├─ package.json                 # root scripts (install:all, dev, setup, seed, build)
+├─ package.json                 # root scripts (install:all, dev, setup, seed, build, vercel-build)
+├─ vercel.json                  # Vercel build/install/rewrites config
+├─ api/index.js                 # Vercel serverless entry (exports the Express app)
 ├─ server/
 │  ├─ prisma/
-│  │  ├─ schema.prisma          # data model
-│  │  └─ seed.js                # demo data + SVG placeholders
+│  │  ├─ schema.prisma          # data model (SQLite, local development)
+│  │  ├─ schema.postgres.prisma # data model (PostgreSQL, production/Vercel)
+│  │  └─ seed.js                # demo data (images via /api/placeholder)
 │  ├─ src/
-│  │  ├─ index.js               # Express entry, routes, Socket.IO, static /uploads
+│  │  ├─ app.js                 # Express app (exported; no listen)
+│  │  ├─ index.js               # node entry: http server + Socket.IO + static client
 │  │  ├─ config/env.js
 │  │  ├─ lib/{prisma,socket,storage,otpStore}.js
 │  │  ├─ middleware/{auth,validate,error}.js
@@ -155,11 +156,12 @@ chotulal/
 │  │  │            notifications,audit}.js
 │  │  └─ routes/
 │  │     ├─ auth / catalog / cart / orders / tracking / uploads / payments
+│  │     ├─ placeholder.routes.js # on-the-fly SVG placeholders
 │  │     ├─ delivery.routes.js
 │  │     └─ admin/…             # dashboard, products, categories, homepage,
 │  │                             # orders, customers, inventory, delivery,
 │  │                             # reports, settings
-│  └─ uploads/                  # local image storage
+│  └─ uploads/                  # local image storage (dev only)
 └─ client/
    └─ src/
       ├─ App.jsx                # all routes
@@ -206,21 +208,44 @@ also: CANCELLED (restores stock) | FAILED_DELIVERY
 
 ---
 
-## Production Build & Deployment
+## Deployment
 
+### Option A — Vercel (serverless)
+The repo is pre-configured for Vercel via `vercel.json` and the root `api/index.js` function:
+
+- `client/` → static site (`client/dist`)
+- `api/index.js` → Express app as a Node serverless function; `/api/*` and `/uploads/*` are rewritten to it
+- The DB schema is pushed and seeded at build time (`npm run vercel-build`)
+
+**Steps**
+1. Create a Postgres database (e.g. [Neon](https://neon.tech) free tier) and copy its **pooled** connection string.
+2. Create a Cloudinary account (free tier) for image uploads.
+3. On Vercel: **Add New → Project → Import** `dhruvkumar2107/bkry`. Vercel reads `vercel.json` automatically (no framework preset needed).
+4. Add **Environment Variables** (Production + Preview):
+   | Name | Value |
+   | --- | --- |
+   | `DATABASE_URL` | Neon pooled URL (add `&pgbouncer=true&connection_limit=1`) |
+   | `JWT_SECRET` | a long random string |
+   | `STORAGE_DRIVER` | `cloudinary` |
+   | `PUBLIC_BASE_URL` | `https://<your-app>.vercel.app` |
+   | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | from Cloudinary |
+   | `OTP_DEV_MODE` | `false` once you wire SMS (keep `true` to demo with code `123456`) |
+   | `CORS_ORIGINS` | `https://<your-app>.vercel.app` |
+5. **Deploy.** The build installs server + client deps, builds the client, pushes the Postgres schema and seeds the catalogue.
+6. Open the site and log in as admin (`9999999999` / `admin123`) — **change immediately**.
+
+> **Realtime note:** Vercel serverless cannot host Socket.IO. Realtime is therefore opt-in via the client env `VITE_ENABLE_SOCKETS` (leave unset/false on Vercel); the UI automatically polls the REST API every ~15s instead, so live tracking still updates.
+
+### Option B — Single long-lived Node server (VPS / Render / Railway / Docker)
 ```bash
-# build the client
-npm run build            # outputs client/dist
-
-# start the API (serves client/dist when NODE_ENV=production)
-NODE_ENV=production npm --prefix server start
+npm run build                                  # outputs client/dist
+NODE_ENV=production npm --prefix server start   # serves API + client on PORT
 ```
-
-The server serves the built client and `/uploads` from one origin in production. Recommended:
-- Put the app behind a reverse proxy (Nginx/Caddy) with TLS.
-- Switch the database to PostgreSQL.
-- Set a strong `JWT_SECRET` and rotate default staff credentials.
-- Configure `CORS_ORIGINS` to your real domain(s).
+The server serves the built client and `/uploads` from one origin. Recommended:
+- Put it behind a reverse proxy (Nginx/Caddy) with TLS.
+- Use PostgreSQL (see Database above).
+- Set a strong `JWT_SECRET`, rotate default staff credentials, restrict `CORS_ORIGINS`.
+- For persistent uploads either mount a volume for `server/uploads` or use `STORAGE_DRIVER=cloudinary`.
 
 ---
 
@@ -239,6 +264,7 @@ With both apps running:
 
 ## Notes & Limitations
 
-- Seeded product images are generated SVG placeholders — replace via Admin → Products/Images.
+- Seeded product/banner images are served on the fly by `/api/placeholder/*.svg` — replace via Admin → Products/Images.
 - Online payments, SMS/WhatsApp/email and the Cloudinary driver require credentials to activate.
 - Dev OTP is intentionally insecure; disable `OTP_DEV_MODE` and wire a provider for production.
+- Socket.IO realtime is unavailable on serverless (Vercel); the client polls instead. Set `VITE_ENABLE_SOCKETS=true` on a long-lived server to enable it.

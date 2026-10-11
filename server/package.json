@@ -13,7 +13,9 @@
     "migrate": "prisma migrate dev --name init",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
-    "setup": "prisma generate && prisma db push && node prisma/seed.js"
+    "setup": "prisma generate && prisma db push && node prisma/seed.js",
+    "vercel:generate": "prisma generate --schema prisma/schema.postgres.prisma",
+    "vercel:db": "prisma generate --schema prisma/schema.postgres.prisma && prisma db push --schema prisma/schema.postgres.prisma --skip-generate --accept-data-loss && node prisma/seed.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
