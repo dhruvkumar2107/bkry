@@ -211,6 +211,10 @@ also: CANCELLED (restores stock) | FAILED_DELIVERY
 ## Deployment
 
 ### Option A — Vercel (serverless)
+
+**Live:** https://chotulal-mu.vercel.app (Neon Postgres, `STORAGE_DRIVER=inline`)
+- Admin: `9999999999` / `admin123` · Delivery: `8888888881` / `delivery123` — **change these.**
+
 The repo is pre-configured for Vercel via `vercel.json` and the root `api/index.js` function:
 
 - `client/` → static site (`client/dist`)
@@ -224,6 +228,7 @@ The repo is pre-configured for Vercel via `vercel.json` and the root `api/index.
    | Name | Value |
    | --- | --- |
    | `DATABASE_URL` | Neon pooled URL (add `&pgbouncer=true&connection_limit=1`) |
+   | `DIRECT_URL` | Neon **unpooled/direct** URL (used by `prisma db push` at build time) |
    | `JWT_SECRET` | a long random string |
    | `STORAGE_DRIVER` | `inline` (uploads stored in the DB) |
    | `PUBLIC_BASE_URL` | `https://<your-app>.vercel.app` |
