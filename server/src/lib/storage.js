@@ -22,7 +22,7 @@ const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/av
 
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: 4 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED.includes(file.mimetype)) cb(null, true);
     else cb(new ApiError(400, 'Only image uploads (jpeg, png, webp, gif, avif) are allowed'));
@@ -64,10 +64,17 @@ const uploadToCloudinary = async (buffer, originalname) => {
 };
 
 // Persists an uploaded file and returns a public URL.
-// Driver "local" serves from /uploads; "cloudinary" pushes to object storage.
+//   "local"      -> served from /uploads (single long-lived node/VPS deploy)
+//   "cloudinary" -> pushed to Cloudinary object storage
+//   "inline"     -> stored as a data: URL in the database (no external service;
+//                   used on serverless hosts with an ephemeral/read-only disk)
 export const persistUpload = async (file) => {
   if (env.storageDriver === 'cloudinary') {
     return uploadToCloudinary(file.buffer, file.originalname);
+  }
+  if (env.storageDriver === 'inline') {
+    const mime = file.mimetype || 'image/jpeg';
+    return `data:${mime};base64,${file.buffer.toString('base64')}`;
   }
   const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
   const filename = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;

@@ -202,7 +202,7 @@ also: CANCELLED (restores stock) | FAILED_DELIVERY
 ## Notifications & Integrations
 
 - **Razorpay:** server-side order creation, HMAC signature verification and webhook handling. Disabled until keys are set.
-- **Cloudinary:** set `STORAGE_DRIVER=cloudinary` and credentials to store uploads in the cloud (uses the REST API, no SDK).
+- **Cloudinary / inline storage:** `STORAGE_DRIVER=cloudinary` pushes uploads to Cloudinary (REST, no SDK); `STORAGE_DRIVER=inline` stores uploads as `data:` URLs in the database (no external service, good for serverless).
 - **SMS/WhatsApp/Email:** notification records are always created in-app; external delivery activates only when the corresponding provider env vars are present.
 - **Maps:** Leaflet + OpenStreetMap tiles (no API key). "Navigation" uses Google Maps deep links.
 
@@ -219,20 +219,19 @@ The repo is pre-configured for Vercel via `vercel.json` and the root `api/index.
 
 **Steps**
 1. Create a Postgres database (e.g. [Neon](https://neon.tech) free tier) and copy its **pooled** connection string.
-2. Create a Cloudinary account (free tier) for image uploads.
-3. On Vercel: **Add New → Project → Import** `dhruvkumar2107/bkry`. Vercel reads `vercel.json` automatically (no framework preset needed).
-4. Add **Environment Variables** (Production + Preview):
+2. On Vercel: **Add New → Project → Import** `dhruvkumar2107/bkry`. Vercel reads `vercel.json` automatically (no framework preset needed).
+3. Add **Environment Variables** (Production + Preview):
    | Name | Value |
    | --- | --- |
    | `DATABASE_URL` | Neon pooled URL (add `&pgbouncer=true&connection_limit=1`) |
    | `JWT_SECRET` | a long random string |
-   | `STORAGE_DRIVER` | `cloudinary` |
+   | `STORAGE_DRIVER` | `inline` (uploads stored in the DB) |
    | `PUBLIC_BASE_URL` | `https://<your-app>.vercel.app` |
-   | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | from Cloudinary |
    | `OTP_DEV_MODE` | `false` once you wire SMS (keep `true` to demo with code `123456`) |
    | `CORS_ORIGINS` | `https://<your-app>.vercel.app` |
-5. **Deploy.** The build installs server + client deps, builds the client, pushes the Postgres schema and seeds the catalogue.
-6. Open the site and log in as admin (`9999999999` / `admin123`) — **change immediately**.
+   | *(optional)* `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | only if you switch `STORAGE_DRIVER=cloudinary` |
+4. **Deploy.** The build installs server + client deps, builds the client, pushes the Postgres schema and seeds the catalogue.
+5. Open the site and log in as admin (`9999999999` / `admin123`) — **change immediately**.
 
 > **Realtime note:** Vercel serverless cannot host Socket.IO. Realtime is therefore opt-in via the client env `VITE_ENABLE_SOCKETS` (leave unset/false on Vercel); the UI automatically polls the REST API every ~15s instead, so live tracking still updates.
 
