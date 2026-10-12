@@ -56,8 +56,8 @@ your own shop photography at any time.
 | c-namkeen-sweets | `/images/c-namkeen-sweets.jpg` | [File:Indian Snack in a bowl (Namkeen).jpg](https://commons.wikimedia.org/wiki/File:Indian_Snack_in_a_bowl_(Namkeen).jpg) | Prashant Sahu | CC BY-SA 4.0 |
 | c-snacks-and-sweets | `/images/c-snacks-and-sweets.jpg` | [File:Jalebi Fafda.jpg](https://commons.wikimedia.org/wiki/File:Jalebi_Fafda.jpg) | Sarika 1410 | CC BY-SA 4.0 |
 | c-veg | `/images/c-veg.jpg` | [File:Samosas plate.jpg](https://commons.wikimedia.org/wiki/File:Samosas_plate.jpg) | Rick Rowland | CC BY 2.0 |
-| banner-0 | `/images/banner-0.jpg` | [File:Almond Khoa based burfi Mumbai India.jpg](https://commons.wikimedia.org/wiki/File:Almond_Khoa_based_burfi_Mumbai_India.jpg) | Jay del Corro | CC BY 2.0 |
-| banner-1 | `/images/banner-1.jpg` | [File:Sweet Mithai, Laddoo and Mixture (Boondi Mitai, Laddu and Karapusa).JPG](https://commons.wikimedia.org/wiki/File:Sweet_Mithai,_Laddoo_and_Mixture_(Boondi_Mitai,_Laddu_and_Karapusa).JPG) | 9dreamsproject | CC BY-SA 4.0 |
-| banner-2 | `/images/banner-2.jpg` | [File:A box full of burfis, Mithai Indian Sweets London November 2009.jpg](https://commons.wikimedia.org/wiki/File:A_box_full_of_burfis,_Mithai_Indian_Sweets_London_November_2009.jpg) | secretlondon123 | CC BY-SA 2.0 |
-| banner-3 | `/images/banner-3.jpg` | [File:Namkeen 02.jpg](https://commons.wikimedia.org/wiki/File:Namkeen_02.jpg) | Suchitra kumari | CC BY-SA 4.0 |
-| banner-4 | `/images/banner-4.jpg` | [File:Samosa with sweet chutney.jpg](https://commons.wikimedia.org/wiki/File:Samosa_with_sweet_chutney.jpg) | Swathi sri srinivasa raghavan | CC0 |
+| banner-0 | `/images/banner-0.jpg` | [File:Sweets in India.jpg](https://commons.wikimedia.org/wiki/File:Sweets_in_India.jpg) | Shraddhasinghuikey | CC BY-SA 4.0 |
+| banner-1 | `/images/banner-1.jpg` | [File:Kaju katli 02.jpg](https://commons.wikimedia.org/wiki/File:Kaju_katli_02.jpg) | Vis M | CC BY-SA 4.0 |
+| banner-2 | `/images/banner-2.jpg` | [File:Diwali gift.jpg](https://commons.wikimedia.org/wiki/File:Diwali_gift.jpg) | Soumendra Kumar Sahoo | CC BY-SA 4.0 |
+| banner-3 | `/images/banner-3.jpg` | [File:Mixture (the Indian snack) in Chennai.JPG](https://commons.wikimedia.org/wiki/File:Mixture_(the_Indian_snack)_in_Chennai.JPG) | Aravind Sivaraj | CC BY-SA 3.0 |
+| banner-4 | `/images/banner-4.jpg` | [File:Urad Dal Kachori.jpg](https://commons.wikimedia.org/wiki/File:Urad_Dal_Kachori.jpg) | Delhifoodwalks | CC BY-SA 4.0 |

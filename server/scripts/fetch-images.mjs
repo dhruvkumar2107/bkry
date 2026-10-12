@@ -76,23 +76,25 @@ const ASSETS = {
   'c-veg': 'File:Samosas plate.jpg',
 
   // ---- Homepage banners ------------------------------------------------------
-  'banner-0': 'File:Almond Khoa based burfi Mumbai India.jpg',
-  'banner-1': 'File:Sweet Mithai, Laddoo and Mixture (Boondi Mitai, Laddu and Karapusa).JPG',
-  'banner-2': 'File:A box full of burfis, Mithai Indian Sweets London November 2009.jpg',
-  'banner-3': 'File:Namkeen 02.jpg',
-  'banner-4': 'File:Samosa with sweet chutney.jpg',
+  // Wide landscape photographs (aspect >= 1.7) so full-bleed hero slides do not
+  // over-crop when object-cover fills the banner.
+  'banner-0': 'File:Sweets in India.jpg',
+  'banner-1': 'File:Kaju katli 02.jpg',
+  'banner-2': 'File:Diwali gift.jpg',
+  'banner-3': 'File:Mixture (the Indian snack) in Chennai.JPG',
+  'banner-4': 'File:Urad Dal Kachori.jpg',
 };
 
 const extFor = (mime) => (mime === 'image/png' ? 'png' : 'jpg');
 
-async function resolve(title) {
+async function resolve(title, width = 900) {
   const api = new URL('https://commons.wikimedia.org/w/api.php');
   api.searchParams.set('action', 'query');
   api.searchParams.set('format', 'json');
   api.searchParams.set('titles', title);
   api.searchParams.set('prop', 'imageinfo');
   api.searchParams.set('iiprop', 'url|size|mime|extmetadata');
-  api.searchParams.set('iiurlwidth', '900');
+  api.searchParams.set('iiurlwidth', String(width));
   const res = await fetch(api, { headers: { 'User-Agent': UA } });
   if (!res.ok) throw new Error(`Commons API ${res.status}`);
   const data = await res.json();
@@ -152,7 +154,7 @@ async function main() {
       continue;
     }
     try {
-      const meta = await withRetry(() => resolve(title));
+      const meta = await withRetry(() => resolve(title, key.startsWith('banner') ? 1600 : 900));
       const cleanUrl = meta.thumbUrl.split('?')[0];
       const ext = extFor(meta.mime);
       const filename = `${key}.${ext}`;
