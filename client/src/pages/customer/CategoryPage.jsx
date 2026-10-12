@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../lib/api.js';
 import ProductBrowser from '../../components/ProductBrowser.jsx';
+import CategoryNav from '../../components/CategoryNav.jsx';
 import { PageLoader } from '../../components/ui.jsx';
 
 export default function CategoryPage() {
@@ -20,9 +21,10 @@ export default function CategoryPage() {
 
   return (
     <div>
-      <nav className="mb-3 text-xs text-slate-400">
+      <nav className="mb-2 text-xs text-slate-400" aria-label="Breadcrumb">
         <Link to="/" className="hover:text-brand-700">Home</Link> / <span className="text-slate-600">{category?.name || slug}</span>
       </nav>
+      <div className="mb-3"><CategoryNav /></div>
       {category?.bannerUrl && (
         <div className="mb-4 overflow-hidden rounded-2xl">
           <img src={category.bannerUrl} alt={category.name} className="h-36 w-full object-cover sm:h-48" />

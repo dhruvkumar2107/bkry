@@ -17,9 +17,15 @@ export default {
           900: '#0f3d24',
         },
         cream: {
-          50: '#fffdf7',
-          100: '#fdf6e9',
-          200: '#fbeed3',
+          50: '#fffefa',
+          100: '#faf5ea',
+          200: '#f4ebd8',
+        },
+        dark: {
+          900: '#172033',
+        },
+        muted: {
+          500: '#64748b',
         },
         gold: {
           400: '#fbbf24',
@@ -28,12 +34,30 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'Segoe UI', 'sans-serif'],
-        brand: ['Georgia', 'Cambria', 'serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        brand: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-        soft: '0 4px 20px rgba(0,0,0,0.06)',
+        card: '0 1px 3px rgba(23,32,51,0.06), 0 1px 2px rgba(23,32,51,0.04)',
+        soft: '0 4px 20px rgba(23,32,51,0.07)',
+        lift: '0 10px 28px rgba(23,32,51,0.11)',
+      },
+      borderRadius: {
+        '2xl': '1rem',
+        '3xl': '1.25rem',
+      },
+      keyframes: {
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.6s infinite',
+        'fade-in': 'fade-in 0.25s ease-out both',
       },
     },
   },

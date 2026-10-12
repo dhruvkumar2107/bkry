@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import api from '../lib/api.js';
 import ProductCard from './ProductCard.jsx';
-import { PageLoader, EmptyState, Pagination } from './ui.jsx';
+import { EmptyState, Pagination, ProductGridSkeleton } from './ui.jsx';
 
 const SORTS = [
   { value: 'popular', label: 'Popularity' },
@@ -46,15 +46,16 @@ export default function ProductBrowser({ title, subtitle, baseParams = {}, showT
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          {showTitle && <h1 className="font-brand text-2xl font-bold text-slate-900">{title}</h1>}
+          {showTitle && <h1 className="page-title">{title}</h1>}
           {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
-          <p className="text-xs text-slate-400">{pagination.total} products</p>
+          {!loading && <p className="text-xs text-slate-400">{pagination.total} products</p>}
         </div>
         <div className="flex items-center gap-2">
-          <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} className="input w-auto py-2 text-sm">
+          <label className="sr-only" htmlFor="sort-select">Sort products</label>
+          <select id="sort-select" value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })} className="input w-auto py-2 text-sm">
             {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
-          <button onClick={() => setOpenFilters((v) => !v)} className="btn-outline py-2 text-sm">
+          <button onClick={() => setOpenFilters((v) => !v)} aria-expanded={openFilters} className="btn-outline py-2 text-sm">
             <SlidersHorizontal className="h-4 w-4" /> Filters {activeFilters && <span className="ml-1 h-2 w-2 rounded-full bg-brand-600" />}
           </button>
         </div>
@@ -79,13 +80,13 @@ export default function ProductBrowser({ title, subtitle, baseParams = {}, showT
       )}
 
       {loading ? (
-        <PageLoader label="Loading products…" />
+        <ProductGridSkeleton count={8} />
       ) : products.length === 0 ? (
         <EmptyState title="No products found" subtitle="Try changing your filters or search for something else."
           action={activeFilters ? <button onClick={clearFilters} className="btn-primary">Clear filters</button> : null} />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {products.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
           <Pagination page={pagination.page} pages={pagination.pages} onChange={load} />

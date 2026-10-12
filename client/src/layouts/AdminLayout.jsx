@@ -72,7 +72,7 @@ export default function AdminLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
           <div className="flex items-center gap-3">
-            <button className="lg:hidden" onClick={() => setOpen((v) => !v)}>
+            <button className="icon-btn lg:hidden" onClick={() => setOpen((v) => !v)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open}>
               {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
             <h1 className="text-base font-semibold text-slate-800">Chotulal Sweets</h1>

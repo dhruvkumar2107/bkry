@@ -18,7 +18,7 @@ export default function DeliveryLayout() {
             <div className="text-[11px] text-brand-200">{user?.name}</div>
           </div>
         </div>
-        <button onClick={doLogout} className="rounded-lg p-2 hover:bg-brand-600"><LogOut className="h-5 w-5" /></button>
+        <button onClick={doLogout} aria-label="Sign out" className="rounded-lg p-2 hover:bg-brand-600"><LogOut className="h-5 w-5" /></button>
       </header>
 
       <main className="flex-1 p-3">

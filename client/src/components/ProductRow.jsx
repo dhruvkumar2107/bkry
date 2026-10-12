@@ -13,24 +13,28 @@ export default function ProductRow({ title, subtitle, products = [], viewAllLink
   };
 
   return (
-    <section className="py-4">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h2 className="font-brand text-xl font-bold text-slate-900 sm:text-2xl">{title}</h2>
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+    <section className="section">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="section-title">{title}</h2>
+          {subtitle && <p className="section-subtitle">{subtitle}</p>}
         </div>
-        <div className="flex items-center gap-2">
-          {viewAllLink && <Link to={viewAllLink} className="btn-outline px-3 py-1.5 text-xs">View All</Link>}
-          <div className="hidden gap-1 sm:flex">
-            <button onClick={() => scroll(-1)} aria-label="Scroll left" className="rounded-full border border-slate-200 bg-white p-1.5 hover:border-brand-300"><ChevronLeft className="h-4 w-4" /></button>
-            <button onClick={() => scroll(1)} aria-label="Scroll right" className="rounded-full border border-slate-200 bg-white p-1.5 hover:border-brand-300"><ChevronRight className="h-4 w-4" /></button>
+        <div className="flex shrink-0 items-center gap-2">
+          {viewAllLink && <Link to={viewAllLink} className="btn-outline btn-sm">View All</Link>}
+          <div className="hidden gap-1 sm:flex lg:hidden">
+            <button onClick={() => scroll(-1)} aria-label="Scroll left" className="icon-btn h-8 w-8 border border-slate-200 bg-white"><ChevronLeft className="h-4 w-4" /></button>
+            <button onClick={() => scroll(1)} aria-label="Scroll right" className="icon-btn h-8 w-8 border border-slate-200 bg-white"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
 
-      <div ref={scroller} className="no-scrollbar flex snap-x gap-3 overflow-x-auto pb-2">
+      <div
+        ref={scroller}
+        className="scroll-x scroll-px-4 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:pb-0 xl:grid-cols-5"
+        aria-label={`${title} products`}
+      >
         {products.map((p) => (
-          <div key={p.id} className="w-40 shrink-0 snap-start sm:w-48 lg:w-52">
+          <div key={p.id} className="w-40 shrink-0 snap-item sm:w-48 lg:w-auto lg:shrink">
             <ProductCard product={p} />
           </div>
         ))}

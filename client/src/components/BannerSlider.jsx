@@ -12,17 +12,19 @@ export default function BannerSlider({ banners = [] }) {
 
   useEffect(() => {
     if (banners.length <= 1) return undefined;
-    timer.current = setInterval(() => setIndex((i) => (i + 1) % banners.length), 5000);
+    timer.current = setInterval(() => setIndex((i) => (i + 1) % banners.length), 5500);
     return () => clearInterval(timer.current);
   }, [banners.length]);
 
   if (!banners.length) return null;
 
-  const b = banners[index];
-
   return (
     <div
-      className="relative overflow-hidden rounded-2xl"
+      className="relative overflow-hidden rounded-2xl bg-cream-100 shadow-card"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Featured promotions"
+      onMouseEnter={() => clearInterval(timer.current)}
       onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
         if (touchX.current == null) return;
@@ -32,20 +34,35 @@ export default function BannerSlider({ banners = [] }) {
         touchX.current = null;
       }}
     >
-      <div className="relative h-44 sm:h-64 lg:h-80 w-full">
+      <div className="relative h-44 w-full sm:h-56 md:h-64 lg:h-72">
         {banners.map((bn, i) => (
           <Link
             key={bn.id}
             to={bn.ctaLink || '/products'}
-            className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            aria-hidden={i !== index}
+            tabIndex={i === index ? 0 : -1}
+            className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           >
-            <img src={bn.imageUrl} alt={bn.title} onError={(e) => { e.currentTarget.src = PLACEHOLDER; }} className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
-            <div className="absolute inset-0 flex flex-col justify-center gap-2 p-6 sm:p-10 text-white max-w-xl">
-              {bn.subtitle && <span className="w-fit rounded-full bg-gold-500/90 px-3 py-1 text-xs font-bold uppercase tracking-wide">{bn.subtitle}</span>}
-              <h2 className="font-brand text-2xl font-bold leading-tight drop-shadow sm:text-3xl lg:text-4xl">{bn.title}</h2>
-              {bn.description && <p className="hidden max-w-md text-sm text-white/90 sm:block">{bn.description}</p>}
-              {bn.ctaLabel && <span className="mt-1 w-fit rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold">{bn.ctaLabel}</span>}
+            <img
+              src={bn.imageUrl}
+              alt={bn.imageAlt || bn.title || ''}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+              className="h-full w-full object-cover"
+            />
+            {/* Layered overlay keeps text legible on any photo without hiding the product. */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+            <div className="absolute inset-0 flex max-w-xl flex-col justify-end gap-2 p-5 text-white sm:justify-center sm:p-10">
+              {bn.subtitle && (
+                <span className="w-fit rounded-full bg-gold-500/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide">{bn.subtitle}</span>
+              )}
+              <h2 className="font-brand text-2xl font-bold leading-tight drop-shadow-sm sm:text-3xl lg:text-4xl">{bn.title}</h2>
+              {bn.description && <p className="line-clamp-2 max-w-md text-sm text-white/90 sm:text-base">{bn.description}</p>}
+              {bn.ctaLabel && (
+                <span className="mt-1 w-fit rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold shadow-soft transition hover:bg-brand-700">{bn.ctaLabel}</span>
+              )}
             </div>
           </Link>
         ))}
@@ -53,15 +70,21 @@ export default function BannerSlider({ banners = [] }) {
 
       {banners.length > 1 && (
         <>
-          <button onClick={() => go(index - 1)} aria-label="Previous" className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 text-slate-700 backdrop-blur hover:bg-white">
+          <button onClick={() => go(index - 1)} aria-label="Previous slide" className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/85 p-2 text-slate-700 shadow-sm backdrop-blur hover:bg-white sm:block">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <button onClick={() => go(index + 1)} aria-label="Next" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 text-slate-700 backdrop-blur hover:bg-white">
+          <button onClick={() => go(index + 1)} aria-label="Next slide" className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/85 p-2 text-slate-700 shadow-sm backdrop-blur hover:bg-white sm:block">
             <ChevronRight className="h-5 w-5" />
           </button>
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
             {banners.map((_, i) => (
-              <button key={i} onClick={() => go(i)} aria-label={`Slide ${i + 1}`} className={`h-2 rounded-full transition-all ${i === index ? 'w-6 bg-white' : 'w-2 bg-white/50'}`} />
+              <button
+                key={i}
+                onClick={() => go(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                aria-current={i === index}
+                className={`h-1.5 rounded-full transition-all ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/60 hover:bg-white/80'}`}
+              />
             ))}
           </div>
         </>

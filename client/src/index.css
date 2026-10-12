@@ -5,28 +5,75 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
   body {
-    @apply bg-cream-50 text-slate-800 antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-cream-50 text-slate-900 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
-  h1, h2, h3 {
-    @apply text-slate-900;
+  h1, h2, h3, h4 {
+    @apply text-slate-900 font-bold tracking-tight;
+  }
+  /* Visible, consistent focus ring for keyboard users. */
+  :focus-visible {
+    outline: 2px solid theme('colors.brand.600');
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+  /* Respect users who prefer reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer components {
+  /* ---- Layout ---- */
+  .container-app {
+    @apply mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-6;
+  }
+  .section {
+    @apply py-3 sm:py-4;
+  }
+  .section-tight {
+    @apply py-2 sm:py-3;
+  }
+
+  /* ---- Typography scale ---- */
+  .page-title {
+    @apply text-xl font-bold tracking-tight text-slate-900 sm:text-2xl;
+  }
+  .section-title {
+    @apply text-lg font-bold tracking-tight text-slate-900 sm:text-xl;
+  }
+  .section-subtitle {
+    @apply text-xs font-normal text-slate-500;
+  }
+  .muted {
+    @apply text-slate-500;
+  }
+
+  /* ---- Buttons ---- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-sm {
+    @apply rounded-xl px-3 py-1.5 text-xs font-medium;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm;
+    @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800;
   }
   .btn-gold {
-    @apply btn bg-gold-500 text-white hover:bg-gold-600 shadow-sm;
+    @apply btn bg-gold-500 text-white shadow-sm hover:bg-gold-600;
   }
   .btn-outline {
-    @apply btn border border-slate-200 bg-white text-slate-700 hover:border-brand-300 hover:text-brand-700;
+    @apply btn border border-slate-200 bg-white text-slate-700 hover:border-brand-600 hover:text-brand-700;
   }
   .btn-ghost {
     @apply btn text-slate-600 hover:bg-slate-100;
@@ -34,15 +81,27 @@
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
-  .card {
-    @apply bg-white rounded-2xl shadow-card border border-slate-100;
+  .icon-btn {
+    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-700 transition hover:bg-slate-100 active:scale-95;
   }
+
+  /* ---- Surfaces ---- */
+  .card {
+    @apply rounded-2xl border border-slate-100 bg-white shadow-card;
+  }
+  .card-interactive {
+    @apply card transition duration-200 hover:-translate-y-0.5 hover:shadow-soft;
+  }
+
+  /* ---- Forms ---- */
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-100;
   }
   .label {
-    @apply block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5;
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600;
   }
+
+  /* ---- Misc ---- */
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
   }
@@ -53,13 +112,33 @@
     @apply w-full text-sm;
   }
   .table th {
-    @apply bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap;
+    @apply whitespace-nowrap bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
   }
   .table td {
-    @apply px-4 py-3 border-t border-slate-100 align-middle;
+    @apply border-t border-slate-100 px-4 py-3 align-middle;
   }
+
+  /* ---- Skeleton loading ---- */
+  .skeleton {
+    @apply relative overflow-hidden rounded-xl bg-slate-100;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/70 to-transparent;
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* ---- Scrollbars ---- */
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .scroll-x {
+    @apply flex gap-3 overflow-x-auto pb-2;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .scroll-x::-webkit-scrollbar { display: none; }
+  .snap-item { scroll-snap-align: start; }
 }
 
 .leaflet-container {

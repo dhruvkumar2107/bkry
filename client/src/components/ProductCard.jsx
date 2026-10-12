@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Star, Sparkles } from 'lucide-react';
+import { Plus, Minus, Star, Sparkles, Loader2 } from 'lucide-react';
 import { inr, PLACEHOLDER } from '../lib/format.js';
 import { useCart } from '../store/cart.js';
 import { toast } from '../store/toast.js';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, className = '' }) {
+  const cart = useCart((s) => s.cart);
   const add = useCart((s) => s.add);
+  const updateQty = useCart((s) => s.updateQty);
+  const remove = useCart((s) => s.remove);
   const [busy, setBusy] = useState(false);
 
   const variants = product.variants?.length ? product.variants : [];
@@ -16,11 +19,14 @@ export default function ProductCard({ product }) {
   });
 
   const selected = useMemo(() => variants.find((v) => v.id === variantId) || variants[0], [variants, variantId]);
-  const discount = selected?.originalPrice && selected.originalPrice > selected.price
-    ? Math.round(((selected.originalPrice - selected.price) / selected.originalPrice) * 100)
-    : product.originalPrice && product.originalPrice > product.minPrice
-      ? Math.round(((product.originalPrice - product.minPrice) / product.originalPrice) * 100)
-      : 0;
+  const inCart = cart.items.find((i) => i.variantId === selected?.id);
+
+  const discount =
+    selected?.originalPrice && selected.originalPrice > selected.price
+      ? Math.round(((selected.originalPrice - selected.price) / selected.originalPrice) * 100)
+      : product.originalPrice && product.originalPrice > product.minPrice
+        ? Math.round(((product.originalPrice - product.minPrice) / product.originalPrice) * 100)
+        : 0;
 
   const outOfStock = !product.inStock;
 
@@ -31,7 +37,6 @@ export default function ProductCard({ product }) {
     setBusy(true);
     try {
       await add(selected.id, 1);
-      toast.success(`${product.name} added to cart`);
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Could not add to cart');
     } finally {
@@ -39,21 +44,43 @@ export default function ProductCard({ product }) {
     }
   };
 
+  const changeQty = async (e, delta) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!inCart) return;
+    setBusy(true);
+    try {
+      if (inCart.quantity + delta <= 0) await remove(inCart.id);
+      else await updateQty(inCart.id, inCart.quantity + delta);
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Could not update cart');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const price = selected?.price ?? product.minPrice;
+
   return (
-    <div className="group flex w-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition hover:shadow-soft">
+    <article className={`group flex w-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-card transition duration-200 hover:shadow-lift ${className}`}>
       <Link to={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-cream-100">
         <img
           src={product.images?.[0]?.url || PLACEHOLDER}
           alt={product.name}
           loading="lazy"
+          decoding="async"
+          width="400"
+          height="400"
           onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
         />
-        <div className="absolute left-2 top-2 flex flex-col gap-1">
-          {product.isBestseller && <span className="chip bg-gold-500 text-white"><Star className="h-3 w-3" /> Bestseller</span>}
-          {product.isNewArrival && <span className="chip bg-brand-600 text-white"><Sparkles className="h-3 w-3" /> New</span>}
+        <div className="absolute left-1.5 top-1.5 flex flex-col items-start gap-1">
+          {product.isBestseller && <span className="chip bg-gold-500/95 text-white shadow-sm"><Star className="h-3 w-3" /> Bestseller</span>}
+          {product.isNewArrival && <span className="chip bg-brand-600/95 text-white shadow-sm"><Sparkles className="h-3 w-3" /> New</span>}
         </div>
-        {discount > 0 && <span className="absolute right-2 top-2 chip bg-red-500 text-white">{discount}% OFF</span>}
+        {discount > 0 && (
+          <span className="absolute right-1.5 top-1.5 chip bg-red-500 text-white shadow-sm">{discount}% OFF</span>
+        )}
         {outOfStock && (
           <div className="absolute inset-0 grid place-items-center bg-white/70">
             <span className="chip bg-slate-800 text-white">Out of stock</span>
@@ -61,20 +88,21 @@ export default function ProductCard({ product }) {
         )}
       </Link>
 
-      <div className="flex flex-1 flex-col p-3">
-        <Link to={`/product/${product.slug}`} className="line-clamp-2 text-sm font-semibold leading-snug text-slate-800 hover:text-brand-700">
+      <div className="flex flex-1 flex-col p-2.5 sm:p-3">
+        <Link to={`/product/${product.slug}`} title={product.name} className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-slate-800 hover:text-brand-700">
           {product.name}
         </Link>
-        <p className="mt-0.5 text-xs text-slate-400">{product.unit || `${variants.length} options`}</p>
+        <p className="mt-0.5 truncate text-xs text-slate-400">{product.unit || (variants.length > 1 ? `${variants.length} sizes` : 'Freshly made')}</p>
 
         {variants.length > 1 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-2 flex gap-1 overflow-x-auto pb-0.5 no-scrollbar">
             {variants.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setVariantId(v.id)}
                 disabled={v.stock <= 0}
-                className={`rounded-lg border px-2 py-0.5 text-[11px] font-medium transition ${
+                aria-label={`Select ${v.label}${v.stock <= 0 ? ' (out of stock)' : ''}`}
+                className={`shrink-0 rounded-lg border px-1.5 py-0.5 text-[11px] font-medium transition ${
                   v.id === variantId
                     ? 'border-brand-600 bg-brand-50 text-brand-700'
                     : v.stock <= 0
@@ -88,10 +116,10 @@ export default function ProductCard({ product }) {
           </div>
         )}
 
-        <div className="mt-auto flex items-end justify-between pt-3">
-          <div>
+        <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+          <div className="min-w-0">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-bold text-slate-900">{inr(selected?.price ?? product.minPrice)}</span>
+              <span className="text-base font-bold text-slate-900">{inr(price)}</span>
               {selected?.originalPrice > selected?.price && (
                 <span className="text-xs text-slate-400 line-through">{inr(selected.originalPrice)}</span>
               )}
@@ -101,15 +129,28 @@ export default function ProductCard({ product }) {
             )}
           </div>
 
-          <button
-            onClick={onAdd}
-            disabled={busy || outOfStock || !selected || selected.stock <= 0}
-            className="btn-primary px-3 py-2 text-xs"
-          >
-            <Plus className="h-4 w-4" /> Add
-          </button>
+          {inCart ? (
+            <div className="flex items-center gap-1 rounded-xl border border-brand-200 bg-brand-50 px-0.5">
+              <button onClick={(e) => changeQty(e, -1)} disabled={busy} aria-label="Decrease quantity" className="grid h-7 w-7 place-items-center rounded-lg text-brand-700 hover:bg-brand-100">
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="min-w-[16px] text-center text-sm font-bold text-brand-700">{inCart.quantity}</span>
+              <button onClick={(e) => changeQty(e, 1)} disabled={busy || (selected && inCart.quantity >= selected.stock)} aria-label="Increase quantity" className="grid h-7 w-7 place-items-center rounded-lg text-brand-700 hover:bg-brand-100 disabled:opacity-40">
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onAdd}
+              disabled={busy || outOfStock || !selected || selected.stock <= 0}
+              aria-label={`Add ${product.name} to cart`}
+              className="btn-primary btn-sm gap-1"
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-4 w-4" />} Add
+            </button>
+          )}
         </div>
       </div>
-    </div>
+    </article>
   );
 }
