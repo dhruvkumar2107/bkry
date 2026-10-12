@@ -51,17 +51,17 @@ export default function BannerSlider({ banners = [] }) {
               onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
               className="h-full w-full object-cover"
             />
-            {/* Layered overlay keeps text legible on any photo without hiding the product. */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
-            <div className="absolute inset-0 flex max-w-xl flex-col justify-end gap-2 p-5 text-white sm:justify-center sm:p-10">
+            {/* Layered scrim keeps the overlaid text legible on any photo. */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+            <div className="absolute inset-0 flex max-w-xl flex-col justify-end gap-2 p-5 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.6)] sm:justify-center sm:p-10">
               {bn.subtitle && (
-                <span className="w-fit rounded-full bg-gold-500/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide">{bn.subtitle}</span>
+                <span className="w-fit rounded-full bg-gold-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white [text-shadow:none] shadow-sm">{bn.subtitle}</span>
               )}
-              <h2 className="font-brand text-2xl font-bold leading-tight drop-shadow-sm sm:text-3xl lg:text-4xl">{bn.title}</h2>
-              {bn.description && <p className="line-clamp-2 max-w-md text-sm text-white/90 sm:text-base">{bn.description}</p>}
+              <h2 className="font-brand text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{bn.title}</h2>
+              {bn.description && <p className="line-clamp-2 max-w-md text-sm text-white/95 sm:text-base">{bn.description}</p>}
               {bn.ctaLabel && (
-                <span className="mt-1 w-fit rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold shadow-soft transition hover:bg-brand-700">{bn.ctaLabel}</span>
+                <span className="mt-1 w-fit rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold shadow-soft transition hover:bg-brand-700 [text-shadow:none]">{bn.ctaLabel}</span>
               )}
             </div>
           </Link>
