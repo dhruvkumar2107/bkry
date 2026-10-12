@@ -22,13 +22,14 @@ All three are served by a single React (Vite) client that talks to one Express +
 - OTP phone login (dev mode) + saved addresses
 - Checkout: saved address / live GPS location / manual address, coupons, COD or online (Razorpay)
 - Order confirmation, order history and **live order tracking** (status timeline + rider on a map)
+- **Shareable secure tracking link** (`/track-order/:orderNumber?t=<signed-JWT>`) — copyable from the confirmation page; opens tracking in any browser, no login required
 
 **Admin**
 - Dashboard KPIs, 7-day sales chart, bestsellers, low/out-of-stock alerts, recent activity
 - Products CRUD with image upload, multi-variant editor, categories, flags, **CSV import/export**, bulk price/stock updates, duplicate
 - Categories CRUD with drag-order, home visibility, icon/image
 - Homepage editor: banners + section layout (featured, bestsellers, new arrivals, offers, category carousels)
-- Orders: filter/search, full detail, status workflow, assign riders, cancel (auto stock restore), printable invoice
+- Orders: filter/search, full detail, status workflow, assign riders, cancel (auto stock restore), printable invoice, **copy/open the customer tracking link** and see the rider's latest GPS ping
 - Customers: search, profiles, lifetime value, order history, enable/disable
 - Inventory: stock levels, adjustments and per-variant movement history
 - Live deliveries map (customer destination + moving rider), stale-GPS detection
@@ -130,7 +131,7 @@ The repo ships a ready-to-use Postgres schema at `server/prisma/schema.postgres.
 
 > Keep `schema.prisma` (SQLite) and `schema.postgres.prisma` (Postgres) in sync when you change models.
 
-Seeding is idempotent-ish (upserts the catalogue). Demo images are served on the fly by `/api/placeholder/*.svg`, so they work on any host with no storage; replace them with real photos via the admin uploader (stored in Cloudinary).
+Seeding is idempotent-ish (upserts the catalogue). The seeded catalogue ships with **real, bundled product/category/banner photographs** under `client/public/images` (served by the client/CDN, so they work on any host). Photos are the property of their respective authors and used under Creative Commons licences — see [`client/public/images/CREDITS.md`](client/public/images/CREDITS.md). Replace any image from **Admin → Products / Homepage**; if a photo is missing, the app falls back to a bundled branded placeholder (`/images/fallback.svg`) and finally to an on-the-fly SVG via `/api/placeholder/*.svg`.
 
 ---
 
@@ -145,7 +146,9 @@ chotulal/
 │  ├─ prisma/
 │  │  ├─ schema.prisma          # data model (SQLite, local development)
 │  │  ├─ schema.postgres.prisma # data model (PostgreSQL, production/Vercel)
-│  │  └─ seed.js                # demo data (images via /api/placeholder)
+│  │  ├─ image-manifest.json    # slug -> bundled photo + attribution
+│  │  └─ seed.js                # demo data (uses bundled real photos)
+│  ├─ scripts/fetch-images.mjs  # downloads curated Commons photos -> client/public/images
 │  ├─ src/
 │  │  ├─ app.js                 # Express app (exported; no listen)
 │  │  ├─ index.js               # node entry: http server + Socket.IO + static client
@@ -192,6 +195,7 @@ also: CANCELLED (restores stock) | FAILED_DELIVERY
 - The delivery panel shares GPS via `navigator.geolocation.watchPosition` while a delivery is active.
 - Pings are stored, broadcast over Socket.IO, and shown to the customer on a Leaflet map.
 - GPS older than 60s is flagged **stale**.
+- The customer's confirmation page exposes a **copy tracking link** button containing a signed JWT (`?t=`) valid for 14 days; the tracking API authorises the owner, staff, or a valid token, so a shared link never leaks other orders.
 
 **OTP login (dev)**
 - `OTP_DEV_MODE=true` logs the code and returns the fixed `OTP_DEV_CODE`.
@@ -268,7 +272,7 @@ With both apps running:
 
 ## Notes & Limitations
 
-- Seeded product/banner images are served on the fly by `/api/placeholder/*.svg` — replace via Admin → Products/Images.
+- Seeded product/category/banner images are **real photographs bundled with the repo** (`client/public/images`); attribution lives in [`client/public/images/CREDITS.md`](client/public/images/CREDITS.md). Replace any image via Admin → Products/Homepage or the uploader.
 - Online payments, SMS/WhatsApp/email and the Cloudinary driver require credentials to activate.
 - Dev OTP is intentionally insecure; disable `OTP_DEV_MODE` and wire a provider for production.
 - Socket.IO realtime is unavailable on serverless (Vercel); the client polls instead. Set `VITE_ENABLE_SOCKETS=true` on a long-lived server to enable it.

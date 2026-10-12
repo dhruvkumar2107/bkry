@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
-import { CheckCircle2, Package, Home } from 'lucide-react';
+import { CheckCircle2, Package, Home, Copy } from 'lucide-react';
 import api from '../../lib/api.js';
 import { inr, dateTime } from '../../lib/format.js';
+import { toast } from '../../store/toast.js';
 import { PageLoader, StatusBadge } from '../../components/ui.jsx';
 
 export default function OrderConfirmationPage() {
@@ -10,6 +11,15 @@ export default function OrderConfirmationPage() {
   const routerState = useLocation();
   const [order, setOrder] = useState(null);
   const [trackingToken, setTrackingToken] = useState(routerState.state?.token || localStorage.getItem(`track_${orderNumber}`));
+
+  const trackHref = `/track-order/${orderNumber}${trackingToken ? `?t=${trackingToken}` : ''}`;
+
+  const copyTracking = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${trackHref}`);
+      toast.success('Tracking link copied');
+    } catch { toast.error('Could not copy link'); }
+  };
 
   useEffect(() => {
     if (routerState.state?.token) localStorage.setItem(`track_${orderNumber}`, routerState.state.token);
@@ -67,7 +77,8 @@ export default function OrderConfirmationPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-          <Link to={`/track-order/${order.orderNumber}`} className="btn-primary flex-1"><Package className="h-4 w-4" /> Track Order</Link>
+          <Link to={trackHref} className="btn-primary flex-1"><Package className="h-4 w-4" /> Track Order</Link>
+          <button onClick={copyTracking} className="btn-outline flex-1"><Copy className="h-4 w-4" /> Copy tracking link</button>
           <Link to="/products" className="btn-outline flex-1"><Home className="h-4 w-4" /> Continue shopping</Link>
         </div>
       </div>

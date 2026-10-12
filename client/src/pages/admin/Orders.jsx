@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Search, Printer, MapPin, Bike, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, Printer, MapPin, Bike, CheckCircle2, XCircle, Copy, Navigation, ExternalLink } from 'lucide-react';
 import api, { apiError } from '../../lib/api.js';
 import { toast } from '../../store/toast.js';
-import { inr, dateTime, mapsLink, ORDER_STATUSES, STATUS_LABELS, STATUS_COLORS } from '../../lib/format.js';
+import { inr, dateTime, timeAgo, mapsLink, ORDER_STATUSES, STATUS_LABELS, STATUS_COLORS } from '../../lib/format.js';
 import { Modal, PageLoader, Pagination, Field, StatusBadge, EmptyState, ConfirmDialog } from '../../components/ui.jsx';
 
 export default function AdminOrders() {
@@ -26,7 +26,13 @@ export default function AdminOrders() {
   useEffect(() => { const t = setTimeout(() => load(1), 300); return () => clearTimeout(t); }, [filters]); // eslint-disable-line
   useEffect(() => { api.get('/admin/delivery/boys').then(({ data }) => setBoys(data.boys)); }, []);
 
-  const openDetail = async (id) => { const { data } = await api.get(`/admin/orders/${id}`); setDetail({ ...data.order, nextStatuses: data.nextStatuses }); setAssignBoy(''); };
+  const openDetail = async (id) => { const { data } = await api.get(`/admin/orders/${id}`); setDetail({ ...data.order, nextStatuses: data.nextStatuses, trackingToken: data.trackingToken, locationPings: data.locationPings || [] }); setAssignBoy(''); };
+
+  const trackingUrl = (o) => o?.trackingToken ? `${window.location.origin}/track-order/${o.orderNumber}?t=${o.trackingToken}` : `${window.location.origin}/track-order/${o.orderNumber}`;
+  const copyTracking = async (o) => {
+    try { await navigator.clipboard.writeText(trackingUrl(o)); toast.success('Tracking link copied'); }
+    catch { toast.error('Could not copy link'); }
+  };
 
   const setStatus = async (id, status, note) => {
     try { await api.post(`/admin/orders/${id}/status`, { status, note }); toast.success(`Marked ${STATUS_LABELS[status] || status}`); openDetail(id); load(pagination.page); } catch (e) { toast.error(apiError(e)); }
@@ -103,6 +109,8 @@ export default function AdminOrders() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <StatusBadge status={detail.status} />
               <div className="flex gap-2">
+                <button onClick={() => copyTracking(detail)} className="btn-outline py-1.5 text-xs"><Copy className="h-3.5 w-3.5" /> Tracking link</button>
+                <a href={trackingUrl(detail)} target="_blank" rel="noreferrer" className="btn-outline py-1.5 text-xs"><ExternalLink className="h-3.5 w-3.5" /> Track</a>
                 <button onClick={() => printInvoice(detail)} className="btn-outline py-1.5 text-xs"><Printer className="h-3.5 w-3.5" /> Invoice</button>
                 {!['DELIVERED', 'CANCELLED', 'FAILED_DELIVERY'].includes(detail.status) && <button onClick={() => setCancelId(detail.id)} className="btn-outline border-red-200 py-1.5 text-xs text-red-600"><XCircle className="h-3.5 w-3.5" /> Cancel</button>}
               </div>
@@ -157,6 +165,13 @@ export default function AdminOrders() {
                   <div className="rounded-xl bg-brand-50 p-3">
                     <p className="font-medium">{detail.assignment.deliveryBoy?.name} · {detail.assignment.trackingActive ? 'Tracking live' : 'Assigned'}</p>
                     <p className="text-xs text-slate-500">{detail.assignment.deliveryBoy?.phone}</p>
+                    {detail.locationPings?.[0] ? (
+                      <p className="mt-1 text-xs text-slate-500">
+                        <MapPin className="mr-1 inline h-3 w-3 text-brand-600" />
+                        Last GPS {timeAgo(detail.locationPings[0].recordedAt)}{' '}
+                        <a href={mapsLink(detail.locationPings[0].lat, detail.locationPings[0].lng)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-brand-700"><Navigation className="h-3 w-3" />Open</a>
+                      </p>
+                    ) : <p className="mt-1 text-xs text-slate-400">No GPS updates yet.</p>}
                   </div>
                 ) : (
                   <div className="flex gap-2">

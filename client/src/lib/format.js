@@ -63,6 +63,6 @@ export const STATUS_COLORS = {
   FAILED_DELIVERY: 'bg-rose-100 text-rose-800',
 };
 
-export const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#fdf6e9"/><text x="200" y="150" font-size="48" text-anchor="middle" fill="#d97706">🍬</text></svg>`
-);
+// Bundled branded fallback shown when a photograph is missing or fails to load.
+// Served as a static asset so it never depends on the network or the DB.
+export const PLACEHOLDER = '/images/fallback.svg';

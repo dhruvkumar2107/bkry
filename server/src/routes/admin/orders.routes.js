@@ -7,6 +7,7 @@ import { validate } from '../../middleware/validate.js';
 import { toCsv } from '../../utils/helpers.js';
 import { updateOrderStatus } from '../../services/orderService.js';
 import { nextStatuses } from '../../services/orderStatus.js';
+import { signTrackingToken } from '../orders.routes.js';
 import { getSettings } from '../../services/settings.js';
 import { logAudit } from '../../services/audit.js';
 import { emitToDelivery, emitToUser } from '../../lib/socket.js';
@@ -115,7 +116,13 @@ router.get(
       orderBy: { recordedAt: 'desc' },
       take: 50,
     });
-    res.json({ success: true, order, nextStatuses: nextStatuses(order.status), locationPings });
+    res.json({
+      success: true,
+      order,
+      nextStatuses: nextStatuses(order.status),
+      locationPings,
+      trackingToken: signTrackingToken(order),
+    });
   })
 );
 

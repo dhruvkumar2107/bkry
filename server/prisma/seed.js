@@ -1,7 +1,13 @@
+import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Real product photographs bundled with the repo (see scripts/fetch-images.mjs
+// and client/public/images/CREDITS.md). Each entry maps a product/category/
+// banner key to a bundled local file served from client/public.
+const MANIFEST = JSON.parse(fs.readFileSync(new URL('./image-manifest.json', import.meta.url), 'utf8'));
 
 const PALETTES = {
   sweet: ['#0f766e', '#f59e0b'],
@@ -12,13 +18,16 @@ const PALETTES = {
 };
 
 // Returns a URL to an on-the-fly branded SVG placeholder served by the API.
-// Works on any host (including serverless) with no filesystem or storage
-// dependency; the shop owner replaces these with real photos from the admin.
+// Used only as a last-resort fallback when a product has no bundled photo.
 const imageUrl = (slug, label, palette = 'sweet', emoji = '\u{1F36C}') => {
   const [c1, c2] = PALETTES[palette] || PALETTES.sweet;
   const q = new URLSearchParams({ label, emoji, c1, c2 });
   return `/api/placeholder/${slug}.svg?${q.toString()}`;
 };
+
+// Real bundled photo for a key, falling back to a branded SVG placeholder.
+const photo = (key, slug, label, palette = 'sweet', emoji = '\u{1F36C}') =>
+  MANIFEST[key]?.file || imageUrl(slug, label, palette, emoji);
 
 const CATEGORIES = [
   { name: 'Special Sweets', slug: 'special-sweets', icon: '🍮', palette: 'sweet', emoji: '🍮', desc: 'Handcrafted premium sweets made with pure ghee.' },
@@ -156,15 +165,16 @@ async function main() {
   // --- Categories ----------------------------------------------------------
   const catMap = {};
   for (const [i, c] of CATEGORIES.entries()) {
-    const image = imageUrl(`cat-${c.slug}`, c.name, c.palette, c.emoji);
+    const image = photo(`c-${c.slug}`, `cat-${c.slug}`, c.name, c.palette, c.emoji);
     const cat = await prisma.category.upsert({
       where: { slug: c.slug },
-      update: { name: c.name, imageUrl: image, icon: c.icon, sortOrder: i, isActive: true, showOnHome: true },
+      update: { name: c.name, imageUrl: image, bannerUrl: image, icon: c.icon, sortOrder: i, isActive: true, showOnHome: true },
       create: {
         name: c.name,
         slug: c.slug,
         description: c.desc,
         imageUrl: image,
+        bannerUrl: image,
         icon: c.icon,
         sortOrder: i,
         isActive: true,
@@ -180,14 +190,15 @@ async function main() {
     const slug = slugify(p.name);
     const categories = Array.isArray(p.cat) ? p.cat : [p.cat];
     const palette = CATEGORIES.find((c) => c.slug === categories[0])?.palette || 'sweet';
-    const image = imageUrl(`p-${slug}`, p.name, palette, p.emoji);
+    const image = photo(`p-${slug}`, `p-${slug}`, p.name, palette, p.emoji);
     const variants = buildVariants(p);
     const basePrice = variants[0].price;
     const originalPrice = variants[0].originalPrice || null;
 
     const existing = await prisma.product.findUnique({ where: { slug } });
     if (existing) {
-      // Keep it idempotent - re-seeding only refreshes catalogue metadata.
+      // Idempotent re-seed: refresh metadata AND the primary photograph so
+      // existing installs pick up the bundled real images.
       await prisma.product.update({
         where: { slug },
         data: {
@@ -201,6 +212,12 @@ async function main() {
           sortOrder: i,
         },
       });
+      const current = await prisma.productImage.findFirst({ where: { productId: existing.id }, orderBy: { sortOrder: 'asc' } });
+      if (current) {
+        await prisma.productImage.update({ where: { id: current.id }, data: { url: image, alt: p.name } });
+      } else {
+        await prisma.productImage.create({ data: { productId: existing.id, url: image, alt: p.name, sortOrder: 0 } });
+      }
       continue;
     }
 
@@ -236,7 +253,7 @@ async function main() {
   ];
   await prisma.homepageBanner.deleteMany();
   for (const [i, b] of bannerData.entries()) {
-    const image = imageUrl(`banner-${i}`, b.title, b.palette, b.emoji);
+    const image = photo(`banner-${i}`, `banner-${i}`, b.title, b.palette, b.emoji);
     await prisma.homepageBanner.create({
       data: {
         title: b.title,
