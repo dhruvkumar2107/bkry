@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS = {
   taxPercent: env.defaults.taxPercent,
   taxEnabled: true,
   codEnabled: true,
-  onlinePaymentEnabled: false,
+  onlinePaymentEnabled: env.razorpay.enabled,
   guestCheckoutEnabled: true,
   deliveryZones: 'Bijapur Locality, Bijapur',
   notificationSmsEnabled: false,
@@ -34,7 +34,13 @@ export const getSettings = async () => {
     try { v = JSON.parse(r.value); } catch { /* keep string */ }
     stored[r.key] = v;
   }
-  return { ...DEFAULT_SETTINGS, ...stored };
+  const merged = { ...DEFAULT_SETTINGS, ...stored };
+  // If Razorpay keys are configured in environment, ensure online payment is
+  // enabled unless the admin has explicitly turned it off in the database.
+  if (env.razorpay.enabled && !('onlinePaymentEnabled' in stored)) {
+    merged.onlinePaymentEnabled = true;
+  }
+  return merged;
 };
 
 export const getSetting = async (key, fallback) => {

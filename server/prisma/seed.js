@@ -316,7 +316,7 @@ async function main() {
     taxPercent: 5,
     taxEnabled: true,
     codEnabled: true,
-    onlinePaymentEnabled: false,
+    onlinePaymentEnabled: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
     guestCheckoutEnabled: true,
     deliveryZones: 'Bijapur Locality, Bijapur',
   };

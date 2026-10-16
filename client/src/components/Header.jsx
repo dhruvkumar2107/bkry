@@ -97,7 +97,7 @@ export default function Header() {
           <div className="flex h-14 items-center justify-between gap-2 sm:h-16">
             <div className="flex items-center gap-2 min-w-0">
               <button
-                className="icon-btn -ml-1 md:hidden"
+                className="icon-btn md:hidden"
                 onClick={() => setMobileMenu((v) => !v)}
                 aria-label={mobileMenu ? 'Close menu' : 'Open menu'}
                 aria-expanded={mobileMenu}
@@ -106,10 +106,10 @@ export default function Header() {
               </button>
 
               <Link to="/" className="flex shrink-0 items-center gap-2 group" aria-label="Chotuwala Sweets home">
-                <img src="/logo.svg" alt="" className="h-8 w-8 sm:h-9 sm:w-9 transition-transform group-hover:scale-105" />
-                <div className="leading-none">
-                  <span className="block font-bold text-base sm:text-lg text-brand-700 tracking-tight">Chotuwala Sweets</span>
-                  <span className="block text-[10px] sm:text-[11px] font-medium text-slate-500 mt-0.5">Fresh Mithai & Namkeen</span>
+                <img src="/logo.svg" alt="" className="h-8 w-8 sm:h-9 sm:w-9 transition-transform group-hover:scale-105 w-24" />
+                <div className="leading-none flex items-center gap-2">
+                  <span className="block font-bold text-base sm:text-lg text-brand-700 tracking-tight flex-1 shrink-0">Chotuwala Sweets</span>
+                  <span className="block text-[10px] sm:text-[11px] font-medium text-slate-500 mt-0.5 flex-1 shrink-0">Fresh Mithai & Namkeen</span>
                 </div>
               </Link>
             </div>
@@ -133,7 +133,7 @@ export default function Header() {
             </div>
 
             {/* Right Action Icons: Mobile Location + Account + Cart */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-3 sm:w-full">
               {/* Mobile Location Selector Button */}
               <button
                 onClick={() => setLocOpen(true)}
@@ -141,7 +141,7 @@ export default function Header() {
                 aria-label={`Select delivery location. Currently: ${locLabel}`}
               >
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
-                <span className="max-w-[70px] sm:max-w-[100px] truncate font-medium text-[11px] sm:text-xs">{locLabel}</span>
+                <span className="flex-1 truncate font-medium text-[11px] sm:text-xs">{locLabel}</span>
                 <ChevronDown className="h-3 w-3 text-slate-400" aria-hidden="true" />
               </button>
 

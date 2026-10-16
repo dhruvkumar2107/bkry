@@ -39,6 +39,10 @@ app.use(
     credentials: true,
   })
 );
+// Preserve raw body for Razorpay webhook HMAC verification.
+// The express.json() middleware discards the raw buffer, so we capture it
+// here before parsing for the specific webhook route.
+app.use('/api/payments/razorpay/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

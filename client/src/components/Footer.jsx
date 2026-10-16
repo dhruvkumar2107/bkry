@@ -8,7 +8,7 @@ export default function Footer({ settings = {} }) {
         <div>
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="" className="h-9 w-9" />
-            <span className="font-sans text-lg font-bold text-brand-700">{settings.shopName || 'Chotuwala Sweets'}</span>
+            <span className="font-sans text-lg font-bold text-brand-700">{settings.shopName || 'Chotu Lal Sweets'}</span>
           </div>
           <p className="mt-3 text-sm text-slate-500">{settings.tagline || 'Fresh Sweets, Made with Love'}</p>
           <div className="mt-4 flex gap-3 text-slate-400">

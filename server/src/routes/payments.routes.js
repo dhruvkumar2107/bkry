@@ -6,12 +6,14 @@ import { env } from '../config/env.js';
 import { ApiError, asyncHandler } from '../utils/http.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
-import { notify, ORDER_EVENTS } from '../services/notifications.js';
+import { notify } from '../services/notifications.js';
 import { logAudit } from '../services/audit.js';
 
 const router = Router();
 
 // Creates a Razorpay order for online payment. Requires configured keys.
+// Also supports retry: if a previous PENDING/FAILED payment exists, it reuses
+// the same DB record and issues a fresh Razorpay order ID.
 router.post(
   '/razorpay/create',
   requireAuth,
@@ -24,6 +26,9 @@ router.post(
       where: { orderNumber: req.body.orderNumber, userId: req.user.id },
     });
     if (!order) throw new ApiError(404, 'Order not found');
+    if (order.paymentStatus === 'PAID') {
+      throw new ApiError(400, 'This order has already been paid');
+    }
 
     const auth = Buffer.from(`${env.razorpay.keyId}:${env.razorpay.keySecret}`).toString('base64');
     const rpRes = await fetch('https://api.razorpay.com/v1/orders', {
@@ -36,18 +41,45 @@ router.post(
       }),
     });
     const rpData = await rpRes.json();
-    if (!rpRes.ok) throw new ApiError(502, rpData?.error?.description || 'Failed to create payment');
+    if (!rpRes.ok) {
+      throw new ApiError(502, rpData?.error?.description || 'Failed to create Razorpay order');
+    }
 
-    await prisma.payment.updateMany({
-      where: { orderId: order.id, status: 'PENDING' },
-      data: { providerRef: rpData.id },
+    // Upsert: reuse an existing PENDING/FAILED payment row for retries,
+    // or create a fresh record if none exists.
+    const existingPayment = await prisma.payment.findFirst({
+      where: { orderId: order.id, status: { in: ['PENDING', 'FAILED'] } },
+      orderBy: { createdAt: 'desc' },
     });
 
-    res.json({ success: true, razorpayOrderId: rpData.id, keyId: env.razorpay.keyId, amount: order.total });
+    if (existingPayment) {
+      await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: { providerRef: rpData.id, status: 'PENDING' },
+      });
+    } else {
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          provider: 'RAZORPAY',
+          amount: order.total,
+          status: 'PENDING',
+          providerRef: rpData.id,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      razorpayOrderId: rpData.id,
+      keyId: env.razorpay.keyId,
+      amount: order.total,
+    });
   })
 );
 
-// Verifies a Razorpay payment signature. Never trust the browser's word.
+// Verifies a Razorpay payment signature server-side.
+// The client sends the three fields returned by Razorpay's checkout modal.
 router.post(
   '/razorpay/verify',
   requireAuth,
@@ -72,7 +104,7 @@ router.post(
         where: { providerRef: razorpay_order_id },
         data: { status: 'FAILED' },
       });
-      throw new ApiError(400, 'Payment verification failed');
+      throw new ApiError(400, 'Payment verification failed – signature mismatch');
     }
 
     const payment = await prisma.payment.findFirst({ where: { providerRef: razorpay_order_id } });
@@ -81,42 +113,107 @@ router.post(
     await prisma.$transaction([
       prisma.payment.update({
         where: { id: payment.id },
-        data: { status: 'PAID', providerRef: razorpay_payment_id, signature: razorpay_signature },
+        data: {
+          status: 'PAID',
+          providerRef: razorpay_payment_id,
+          signature: razorpay_signature,
+        },
       }),
-      prisma.order.update({ where: { id: payment.orderId }, data: { paymentStatus: 'PAID' } }),
+      prisma.order.update({
+        where: { id: payment.orderId },
+        data: { paymentStatus: 'PAID' },
+      }),
     ]);
 
-    await logAudit({ userId: req.user.id, action: 'PAYMENT_VERIFIED', entity: 'Order', entityId: payment.orderId });
+    await logAudit({
+      userId: req.user.id,
+      action: 'PAYMENT_VERIFIED',
+      entity: 'Order',
+      entityId: payment.orderId,
+    });
+
+    // In-app notification for the customer.
+    const order = await prisma.order.findUnique({ where: { id: payment.orderId } });
+    if (order) {
+      await notify({
+        userId: req.user.id,
+        orderId: order.id,
+        type: 'PAYMENT_RECEIVED',
+        title: 'Payment received',
+        body: `Payment of \u20b9${order.total} for order ${order.orderNumber} was successful.`,
+      });
+    }
+
     res.json({ success: true });
   })
 );
 
-// Razorpay webhook (server-to-server). Signature verified with webhook secret.
+// Razorpay webhook (server-to-server). Signature verified against the raw
+// request body bytes. app.js registers express.raw() for this path so
+// req.body arrives as a Buffer rather than a parsed object.
 router.post(
   '/razorpay/webhook',
   asyncHandler(async (req, res) => {
-    if (!env.razorpay.webhookSecret) return res.status(200).json({ success: false, error: 'webhook not configured' });
-    const signature = req.headers['x-razorpay-signature'];
-    const body = JSON.stringify(req.body);
-    const expected = crypto.createHmac('sha256', env.razorpay.webhookSecret).update(body).digest('hex');
-    if (signature !== expected) return res.status(400).json({ success: false });
+    if (!env.razorpay.webhookSecret) {
+      return res.status(200).json({ success: false, error: 'webhook not configured' });
+    }
 
-    const event = req.body?.event;
-    const entity = req.body?.payload?.payment?.entity;
+    // req.body is a Buffer because of express.raw() in app.js.
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+
+    const signature = req.headers['x-razorpay-signature'];
+    const expected = crypto
+      .createHmac('sha256', env.razorpay.webhookSecret)
+      .update(rawBody)
+      .digest('hex');
+
+    if (signature !== expected) {
+      return res.status(400).json({ success: false, error: 'invalid signature' });
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(rawBody.toString('utf8'));
+    } catch {
+      return res.status(400).json({ success: false, error: 'invalid JSON body' });
+    }
+
+    const event = payload?.event;
+    const entity = payload?.payload?.payment?.entity;
+
     if (event === 'payment.captured' && entity?.order_id) {
       const payment = await prisma.payment.findFirst({ where: { providerRef: entity.order_id } });
-      if (payment) {
+      if (payment && payment.status !== 'PAID') {
         await prisma.$transaction([
-          prisma.payment.update({ where: { id: payment.id }, data: { status: 'PAID', providerRef: entity.id } }),
-          prisma.order.update({ where: { id: payment.orderId }, data: { paymentStatus: 'PAID' } }),
+          prisma.payment.update({
+            where: { id: payment.id },
+            data: { status: 'PAID', providerRef: entity.id },
+          }),
+          prisma.order.update({
+            where: { id: payment.orderId },
+            data: { paymentStatus: 'PAID' },
+          }),
         ]);
       }
     }
+
+    if (event === 'payment.failed' && entity?.order_id) {
+      const payment = await prisma.payment.findFirst({ where: { providerRef: entity.order_id } });
+      if (payment && payment.status === 'PENDING') {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: 'FAILED' },
+        });
+      }
+    }
+
     res.json({ success: true });
   })
 );
 
-// Payment is optional for COD orders; expose whether online payment is live.
+// Expose whether online payment (Razorpay) is configured on this server.
 router.get('/config', asyncHandler(async (_req, res) => {
   res.json({ success: true, razorpayEnabled: env.razorpay.enabled });
 }));
