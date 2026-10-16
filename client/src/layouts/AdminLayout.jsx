@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, FolderTree, Image, ShoppingCart, Users, Boxes,
-  MapPinned, Bike, BarChart3, Settings, LogOut, Menu, X, Store,
+  MapPinned, Bike, BarChart3, Settings, LogOut, Menu, X, Store, FileText,
 } from 'lucide-react';
 import { useAuth } from '../store/auth.js';
 import Toaster from '../components/Toaster.jsx';
@@ -11,14 +11,15 @@ const links = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/categories', label: 'Categories', icon: FolderTree },
-  { to: '/admin/homepage', label: 'Homepage', icon: Image },
+  { to: '/admin/homepage', label: 'Homepage & Banners', icon: Image },
+  { to: '/admin/content', label: 'Website Content', icon: FileText },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { to: '/admin/customers', label: 'Customers', icon: Users },
   { to: '/admin/inventory', label: 'Inventory', icon: Boxes },
   { to: '/admin/live-deliveries', label: 'Live Deliveries', icon: MapPinned },
   { to: '/admin/delivery-boys', label: 'Delivery Boys', icon: Bike },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/admin/settings', label: 'Settings', icon: Settings },
+  { to: '/admin/settings', label: 'Settings & Branding', icon: Settings },
 ];
 
 export default function AdminLayout() {

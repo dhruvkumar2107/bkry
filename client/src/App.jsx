@@ -19,6 +19,7 @@ import AccountPage from './pages/customer/AccountPage.jsx';
 import OrdersPage from './pages/customer/OrdersPage.jsx';
 import OrderConfirmationPage from './pages/customer/OrderConfirmationPage.jsx';
 import TrackOrderPage from './pages/customer/TrackOrderPage.jsx';
+import ContentPage from './pages/customer/ContentPage.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 import AdminLogin from './pages/admin/AdminLogin.jsx';
@@ -33,6 +34,7 @@ import LiveDeliveries from './pages/admin/LiveDeliveries.jsx';
 import DeliveryBoys from './pages/admin/DeliveryBoys.jsx';
 import Reports from './pages/admin/Reports.jsx';
 import AdminSettings from './pages/admin/Settings.jsx';
+import WebsiteContent from './pages/admin/WebsiteContent.jsx';
 
 import DeliveryLogin from './pages/delivery/DeliveryLogin.jsx';
 import AssignedDeliveries from './pages/delivery/AssignedDeliveries.jsx';
@@ -64,6 +66,13 @@ export default function App() {
         <Route path="orders" element={<OrdersPage />} />
         <Route path="order/:orderNumber" element={<OrderConfirmationPage />} />
         <Route path="track-order/:orderNumber" element={<TrackOrderPage />} />
+        <Route path="about" element={<ContentPage />} />
+        <Route path="delivery-policy" element={<ContentPage />} />
+        <Route path="return-policy" element={<ContentPage />} />
+        <Route path="terms" element={<ContentPage />} />
+        <Route path="privacy" element={<ContentPage />} />
+        <Route path="faqs" element={<ContentPage />} />
+        <Route path="contact" element={<ContentPage />} />
       </Route>
 
       <Route path="/admin/login" element={<AdminLogin />} />
@@ -72,6 +81,7 @@ export default function App() {
         <Route path="products" element={<AdminProducts />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="homepage" element={<AdminHomepage />} />
+        <Route path="content" element={<WebsiteContent />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="inventory" element={<AdminInventory />} />

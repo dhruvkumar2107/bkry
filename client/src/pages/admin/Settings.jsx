@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Save, Plus, Trash2, Ticket, ShieldCheck, ScrollText, Store } from 'lucide-react';
+import { Save, Plus, Trash2, Ticket, ShieldCheck, ScrollText, Store, Palette } from 'lucide-react';
 import api, { apiError } from '../../lib/api.js';
 import { toast } from '../../store/toast.js';
 import { inr, dateTime } from '../../lib/format.js';
 import { PageLoader, Field, Modal, EmptyState, ConfirmDialog } from '../../components/ui.jsx';
+import ImageUploader from '../../components/ImageUploader.jsx';
 
 const TABS = [
-  { key: 'shop', label: 'Shop', icon: Store },
+  { key: 'shop', label: 'Shop & Delivery', icon: Store },
+  { key: 'branding', label: 'Branding & Logos', icon: Palette },
   { key: 'coupons', label: 'Coupons', icon: Ticket },
   { key: 'admins', label: 'Admins', icon: ShieldCheck },
   { key: 'audit', label: 'Audit log', icon: ScrollText },
@@ -84,6 +86,55 @@ export default function AdminSettings() {
           </button>
         ))}
       </div>
+
+      {tab === 'branding' && settings && (
+        <div className="card space-y-6 p-6">
+          <div>
+            <h2 className="font-semibold text-slate-800 text-lg">Website Branding & Assets</h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Upload and manage your store brand assets. Changes reflect immediately across desktop and mobile.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div>
+              <p className="label font-medium">Primary Storefront Logo</p>
+              <p className="text-xs text-slate-400 mb-2">Used in header and footer across all pages.</p>
+              <ImageUploader
+                single
+                images={settings.logoUrl ? [{ url: settings.logoUrl }] : []}
+                onChange={(imgs) => setSettings({ ...settings, logoUrl: imgs[0]?.url || '' })}
+              />
+            </div>
+
+            <div>
+              <p className="label font-medium">Mobile Header Logo (optional)</p>
+              <p className="text-xs text-slate-400 mb-2">Compact icon or crest for small mobile viewports.</p>
+              <ImageUploader
+                single
+                images={settings.mobileLogoUrl ? [{ url: settings.mobileLogoUrl }] : []}
+                onChange={(imgs) => setSettings({ ...settings, mobileLogoUrl: imgs[0]?.url || '' })}
+              />
+            </div>
+
+            <div>
+              <p className="label font-medium">Browser Favicon (optional)</p>
+              <p className="text-xs text-slate-400 mb-2">Small 32x32 icon shown in browser tabs.</p>
+              <ImageUploader
+                single
+                images={settings.faviconUrl ? [{ url: settings.faviconUrl }] : []}
+                onChange={(imgs) => setSettings({ ...settings, faviconUrl: imgs[0]?.url || '' })}
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button onClick={saveSettings} disabled={saving} className="btn-primary">
+              <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save Branding'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {tab === 'shop' && settings && (
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">

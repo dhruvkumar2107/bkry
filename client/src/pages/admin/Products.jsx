@@ -66,6 +66,14 @@ export default function AdminProducts() {
     } catch (e) { toast.error(apiError(e)); } finally { setSaving(false); }
   };
 
+  const togglePublish = async (p) => {
+    try {
+      await api.put(`/admin/products/${p.id}`, { isActive: !p.isActive });
+      toast.success(p.isActive ? `"${p.name}" hidden` : `"${p.name}" published`);
+      setProducts((prev) => prev.map((item) => (item.id === p.id ? { ...item, isActive: !item.isActive } : item)));
+    } catch (e) { toast.error(apiError(e)); }
+  };
+
   const remove = async (id) => { try { await api.delete(`/admin/products/${id}`); toast.success('Product deleted'); load(pagination.page); } catch (e) { toast.error(apiError(e)); } };
   const duplicate = async (id) => { try { await api.post(`/admin/products/${id}/duplicate`); toast.success('Duplicated'); load(); } catch (e) { toast.error(apiError(e)); } };
 
@@ -94,6 +102,14 @@ export default function AdminProducts() {
   const toggleSelect = (vid) => setSelected((s) => (s.includes(vid) ? s.filter((x) => x !== vid) : [...s, vid]));
   const setVariant = (i, patch) => setForm((f) => ({ ...f, variants: f.variants.map((v, idx) => (idx === i ? { ...v, ...patch } : v)) }));
   const addVariant = () => setForm((f) => ({ ...f, variants: [...f.variants, { ...emptyVariant(), sortOrder: f.variants.length }] }));
+  const addPresetVariant = (label, weightGrams, multiplier = 1) => {
+    const baseP = Number(form.basePrice) || 100;
+    const price = Math.round(baseP * multiplier);
+    setForm((f) => ({
+      ...f,
+      variants: [...f.variants, { label, weightGrams, price, originalPrice: null, stock: 20, isActive: true, sortOrder: f.variants.length }],
+    }));
+  };
   const removeVariant = (i) => setForm((f) => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }));
 
   return (
@@ -162,12 +178,25 @@ export default function AdminProducts() {
                       {p.isNewArrival && <span className="chip bg-brand-100 text-brand-700 text-[10px]">New</span>}
                     </div>
                   </td>
-                  <td>{p.isActive ? <span className="chip bg-green-100 text-green-700">Active</span> : <span className="chip bg-slate-100 text-slate-500">Hidden</span>}</td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => togglePublish(p)}
+                      title={p.isActive ? 'Click to hide from store' : 'Click to publish on store'}
+                      className={`chip cursor-pointer transition font-medium text-xs ${
+                        p.isActive
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {p.isActive ? '● Published' : '○ Hidden'}
+                    </button>
+                  </td>
                   <td>
                     <div className="flex gap-1">
-                      <button onClick={() => openEdit(p)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-brand-700"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => duplicate(p.id)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><Copy className="h-4 w-4" /></button>
-                      <button onClick={() => setDelId(p.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => openEdit(p)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-brand-700" title="Edit Product"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => duplicate(p.id)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Duplicate Product"><Copy className="h-4 w-4" /></button>
+                      <button onClick={() => setDelId(p.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Delete Product"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -209,19 +238,38 @@ export default function AdminProducts() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between">
-              <p className="label mb-0">Variants (weights / packs)</p>
-              <button onClick={addVariant} className="btn-outline py-1 text-xs"><Plus className="h-3 w-3" /> Add variant</button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="label mb-0 font-medium text-slate-800">Product Variants (Weights / Packs)</p>
+                <p className="text-[11px] text-slate-400">Quick add standard Indian sweet packs:</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => addPresetVariant('250 g', 250, 0.25)} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 border border-amber-200 hover:bg-amber-100 transition">+ 250 g</button>
+                <button type="button" onClick={() => addPresetVariant('500 g', 500, 0.5)} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 border border-amber-200 hover:bg-amber-100 transition">+ 500 g</button>
+                <button type="button" onClick={() => addPresetVariant('1 kg', 1000, 1)} className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 border border-amber-200 hover:bg-amber-100 transition">+ 1 kg</button>
+                <button type="button" onClick={() => addPresetVariant('1 piece', null, 0.1)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">+ 1 pc</button>
+                <button type="button" onClick={addVariant} className="btn-outline py-1 text-xs"><Plus className="h-3 w-3" /> Custom</button>
+              </div>
             </div>
-            <div className="mt-2 space-y-2">
+
+            <div className="mt-2.5 hidden grid-cols-6 gap-2 px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider sm:grid">
+              <span>Label</span>
+              <span>Weight (g)</span>
+              <span>Selling (₹)</span>
+              <span>MRP (₹)</span>
+              <span>Stock</span>
+              <span></span>
+            </div>
+
+            <div className="mt-1 space-y-2">
               {form.variants.map((v, i) => (
                 <div key={i} className="grid grid-cols-2 gap-2 rounded-xl border border-slate-100 p-3 sm:grid-cols-6">
-                  <input className="input" value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} placeholder="Label" />
-                  <input type="number" className="input" value={v.weightGrams ?? ''} onChange={(e) => setVariant(i, { weightGrams: e.target.value ? Number(e.target.value) : null })} placeholder="grams" />
-                  <input type="number" className="input" value={v.price} onChange={(e) => setVariant(i, { price: Number(e.target.value) })} placeholder="Price" />
-                  <input type="number" className="input" value={v.originalPrice ?? ''} onChange={(e) => setVariant(i, { originalPrice: e.target.value ? Number(e.target.value) : null })} placeholder="MRP" />
-                  <input type="number" className="input" value={v.stock} onChange={(e) => setVariant(i, { stock: Number(e.target.value) })} placeholder="Stock" />
-                  <button onClick={() => removeVariant(i)} className="rounded-lg text-slate-400 hover:text-red-500"><Minus className="mx-auto h-4 w-4" /></button>
+                  <input className="input" value={v.label} onChange={(e) => setVariant(i, { label: e.target.value })} placeholder="Label (e.g. 500 g)" />
+                  <input type="number" className="input" value={v.weightGrams ?? ''} onChange={(e) => setVariant(i, { weightGrams: e.target.value ? Number(e.target.value) : null })} placeholder="Weight in g" />
+                  <input type="number" className="input" value={v.price} onChange={(e) => setVariant(i, { price: Math.max(0, Number(e.target.value)) })} placeholder="Selling ₹" />
+                  <input type="number" className="input" value={v.originalPrice ?? ''} onChange={(e) => setVariant(i, { originalPrice: e.target.value ? Math.max(0, Number(e.target.value)) : null })} placeholder="MRP ₹" />
+                  <input type="number" className="input" value={v.stock} onChange={(e) => setVariant(i, { stock: Math.max(0, Number(e.target.value)) })} placeholder="Stock qty" />
+                  <button type="button" onClick={() => removeVariant(i)} className="rounded-lg text-slate-400 hover:text-red-500 transition" title="Remove variant"><Minus className="mx-auto h-4 w-4" /></button>
                 </div>
               ))}
             </div>

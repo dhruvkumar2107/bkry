@@ -60,10 +60,10 @@ export default function Home() {
       </aside>
 
       <div className="min-w-0">
-        {/* Delivery / location info */}
+        {/* Delivery / location info (desktop & tablet) */}
         <button
           onClick={() => setLocOpen(true)}
-          className="mb-3 flex w-full items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 text-left text-sm shadow-card transition hover:border-brand-200"
+          className="mb-3 hidden sm:flex w-full items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 text-left text-sm shadow-card transition hover:border-brand-200"
         >
           <MapPin className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate">
