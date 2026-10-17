@@ -101,9 +101,21 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Product sections (category carousel handled above) */}
+        {/* Dynamic sections configured from admin */}
         {data.sections.map((s) => {
-          if (s.type === 'CATEGORY_CAROUSEL') return null;
+          if (s.type === 'CATEGORY_CAROUSEL') {
+            return (
+              <div key={s.id} className="my-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="font-brand text-lg font-bold text-slate-800 sm:text-xl">{s.title || 'Categories'}</h2>
+                  <Link to="/products" className="text-xs font-semibold text-brand-700 hover:text-brand-800">
+                    View all
+                  </Link>
+                </div>
+                <CategoryCarousel categories={s.categories || data.categories} />
+              </div>
+            );
+          }
           return (
             <ProductRow
               key={s.id}

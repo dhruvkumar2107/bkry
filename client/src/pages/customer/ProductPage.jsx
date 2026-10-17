@@ -90,6 +90,7 @@ export default function ProductPage() {
 
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-bold text-slate-900">{inr(selected?.price)}</span>
+            {p.unit && <span className="text-sm font-medium text-slate-500">/ {p.unit}</span>}
             {selected?.originalPrice > selected?.price && <span className="text-base text-slate-400 line-through">{inr(selected.originalPrice)}</span>}
             {discount > 0 && <span className="chip bg-red-100 text-red-700">{discount}% OFF</span>}
           </div>

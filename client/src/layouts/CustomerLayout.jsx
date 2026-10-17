@@ -15,6 +15,41 @@ export default function CustomerLayout() {
       .catch(() => {});
   }, []);
 
+  // Sync favicon and SEO meta tags whenever settings are updated in admin
+  useEffect(() => {
+    if (!settings) return;
+    if (settings.faviconUrl) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = settings.faviconUrl;
+    }
+    if (settings.metaTitle) {
+      document.title = settings.metaTitle;
+    }
+    if (settings.metaDescription) {
+      let meta = document.querySelector("meta[name='description']");
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'description';
+        document.head.appendChild(meta);
+      }
+      meta.content = settings.metaDescription;
+    }
+    if (settings.metaKeywords) {
+      let meta = document.querySelector("meta[name='keywords']");
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'keywords';
+        document.head.appendChild(meta);
+      }
+      meta.content = settings.metaKeywords;
+    }
+  }, [settings]);
+
   return (
     <div className="flex min-h-screen flex-col">
       <a

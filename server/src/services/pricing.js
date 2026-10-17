@@ -1,6 +1,6 @@
 import { round2 } from '../utils/helpers.js';
 
-// Delivery fee rules:
+// Default delivery fee rules (used when not customized by shop settings in admin):
 // - subtotal (after discount) >= FREE_DELIVERY_THRESHOLD (999) → free delivery (₹0)
 // - subtotal (after discount) < FREE_DELIVERY_THRESHOLD (999) → flat ₹40 fee
 export const FREE_DELIVERY_THRESHOLD = 999;
@@ -8,15 +8,16 @@ export const STANDARD_DELIVERY_FEE = 40;
 export const COD_FREE_THRESHOLD = 999;
 export const COD_DELIVERY_FEE = 40;
 
-// Calculates delivery fee based on subtotal (after discount).
-// Below ₹999: ₹40. At or above ₹999: Free (₹0).
-export const calcDeliveryFee = ({ subtotal }) => {
-  return Number(subtotal) >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_FEE;
+// Calculates delivery fee based on subtotal (after discount) and shop settings.
+// Uses admin-configured freeDeliveryAbove & deliveryFee from settings if present.
+export const calcDeliveryFee = ({ subtotal, settings }) => {
+  const threshold = settings?.freeDeliveryAbove != null ? Number(settings.freeDeliveryAbove) : FREE_DELIVERY_THRESHOLD;
+  const fee = settings?.deliveryFee != null ? Number(settings.deliveryFee) : STANDARD_DELIVERY_FEE;
+  return Number(subtotal) >= threshold ? 0 : fee;
 };
 
 // Recomputes an order's totals from authoritative variant prices. The browser
 // never dictates prices, discounts, or totals - only variant ids and quantities.
-// Tax is NOT added to customer-facing totals per business requirement.
 export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride }) => {
   let subtotal = 0;
   const lines = [];
@@ -47,7 +48,7 @@ export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride }) 
 
   const afterDiscount = round2(subtotal - discount);
 
-  // Delivery fee: ₹40 below ₹999, free on ₹999+
+  // Delivery fee: calculated dynamically from settings or override
   let deliveryFee;
   if (deliveryFeeOverride !== undefined && deliveryFeeOverride !== null) {
     deliveryFee = deliveryFeeOverride;
@@ -55,7 +56,7 @@ export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride }) 
     deliveryFee = calcDeliveryFee({ subtotal: afterDiscount, settings });
   }
 
-  // Tax is NOT applied to customer-facing totals.
+  // Tax is NOT added to customer-facing totals per business requirement.
   const taxPercent = 0;
   const taxAmount = 0;
 

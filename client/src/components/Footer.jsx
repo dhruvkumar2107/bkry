@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Phone, MapPin, Clock, Instagram, Facebook, MessageCircle, Mail } from 'lucide-react';
+import { Phone, MapPin, Clock, Instagram, Facebook, MessageCircle, Mail, Twitter } from 'lucide-react';
 
 export default function Footer({ settings = {} }) {
   const shopName = settings?.shopName || 'Chotulal Sweets';
@@ -59,6 +59,17 @@ export default function Footer({ settings = {} }) {
                 className="hover:text-green-600 transition"
               >
                 <MessageCircle className="h-5 w-5" />
+              </a>
+            )}
+            {settings?.socialTwitter && (
+              <a
+                href={settings.socialTwitter}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Twitter / X"
+                className="hover:text-slate-800 transition"
+              >
+                <Twitter className="h-5 w-5" />
               </a>
             )}
           </div>

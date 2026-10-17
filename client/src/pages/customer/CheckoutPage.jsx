@@ -235,9 +235,10 @@ export default function CheckoutPage() {
     );
 
   const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
-  const threshold = 999;
+  const threshold = cart.freeDeliveryAbove != null ? cart.freeDeliveryAbove : (settings?.freeDeliveryAbove ?? 999);
   const isFree = afterDiscount >= threshold;
-  const deliveryCharge = isFree ? 0 : 40;
+  const defaultFee = cart.deliveryFee !== undefined && cart.deliveryFee !== null ? cart.deliveryFee : (settings?.deliveryFee ?? 40);
+  const deliveryCharge = isFree ? 0 : defaultFee;
   const diffToFree = isFree ? 0 : threshold - afterDiscount;
   const payableTotal = Math.round((afterDiscount + deliveryCharge) * 100) / 100;
 
@@ -426,7 +427,7 @@ export default function CheckoutPage() {
           ) : (
             <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-800 flex items-center justify-between">
               <span>🎉 Free Delivery</span>
-              <span className="text-[11px] text-green-600">On orders ₹999+</span>
+              <span className="text-[11px] text-green-600">On orders ₹{threshold}+</span>
             </div>
           )}
 

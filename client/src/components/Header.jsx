@@ -175,14 +175,19 @@ export default function Header({ settings: propSettings }) {
                 className="flex items-center gap-2 group min-w-0"
                 aria-label={`${shopName} home`}
               >
-                <img
-                  src={logoSrc}
-                  alt={shopName}
-                  className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 object-contain transition-transform group-hover:scale-105"
-                  onError={(e) => {
-                    e.currentTarget.src = '/logo.svg';
-                  }}
-                />
+                <picture>
+                  {settings?.mobileLogoUrl && (
+                    <source media="(max-width: 639px)" srcSet={settings.mobileLogoUrl} />
+                  )}
+                  <img
+                    src={logoSrc}
+                    alt={shopName}
+                    className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 object-contain transition-transform group-hover:scale-105"
+                    onError={(e) => {
+                      e.currentTarget.src = '/logo.svg';
+                    }}
+                  />
+                </picture>
                 <div className="min-w-0 leading-tight">
                   <span className="block font-bold text-base sm:text-lg text-brand-700 tracking-tight truncate">
                     {shopName}

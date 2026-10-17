@@ -6,7 +6,7 @@ import { inr } from '../../lib/format.js';
 import { Modal, ConfirmDialog, PageLoader, Pagination, Field, EmptyState } from '../../components/ui.jsx';
 import ImageUploader from '../../components/ImageUploader.jsx';
 
-const emptyVariant = () => ({ label: '250 g', weightGrams: 250, price: 0, originalPrice: null, stock: 0, isActive: true, sortOrder: 0 });
+const emptyVariant = () => ({ label: '250 g', weightGrams: 250, price: 0, originalPrice: null, stock: 0, sku: '', isActive: true, sortOrder: 0 });
 const emptyForm = () => ({
   name: '', slug: '', description: '', sku: '', basePrice: 0, originalPrice: null, unit: 'per kg',
   ingredients: '', allergens: '', isActive: true, isFeatured: false, isBestseller: false, isNewArrival: false,
@@ -49,7 +49,7 @@ export default function AdminProducts() {
       originalPrice: p.originalPrice, unit: p.unit || '', ingredients: p.ingredients || '', allergens: p.allergens || '',
       isActive: p.isActive, isFeatured: p.isFeatured, isBestseller: p.isBestseller, isNewArrival: p.isNewArrival,
       categoryIds: p.categoryIds, images: p.images.map((i) => ({ url: i.url, alt: i.alt })),
-      variants: p.variants.map((v) => ({ id: v.id, label: v.label, weightGrams: v.weightGrams, price: v.price, originalPrice: v.originalPrice, stock: v.stock, isActive: v.isActive, sortOrder: v.sortOrder })),
+      variants: p.variants.map((v, idx) => ({ id: v.id, label: v.label, weightGrams: v.weightGrams, price: v.price, originalPrice: v.originalPrice, stock: v.stock, sku: v.sku || '', isActive: v.isActive, sortOrder: v.sortOrder ?? idx })),
     });
     setEditing(p.id);
   };
@@ -60,6 +60,7 @@ export default function AdminProducts() {
     if (!payload.variants || !payload.variants.length) {
       payload.variants = [{ ...emptyVariant(), price: Number(payload.basePrice) || 0, stock: 20 }];
     }
+    payload.variants = payload.variants.map((v, idx) => ({ ...v, sortOrder: v.sortOrder ?? idx }));
     const activePrices = payload.variants
       .filter((v) => v.isActive !== false && Number(v.price) >= 0)
       .map((v) => Number(v.price));

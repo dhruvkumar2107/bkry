@@ -77,9 +77,9 @@ const serializeCart = async (cart, couponCode, paymentMethod = 'ONLINE') => {
     ...totals,
     paymentMethod: paymentMethod || 'ONLINE',
     minOrderAmount: settings.minOrderAmount,
-    freeDeliveryAbove: COD_FREE_THRESHOLD,
-    codFreeDeliveryAbove: COD_FREE_THRESHOLD,
-    codDeliveryFee: COD_DELIVERY_FEE,
+    freeDeliveryAbove: settings.freeDeliveryAbove != null ? settings.freeDeliveryAbove : COD_FREE_THRESHOLD,
+    codFreeDeliveryAbove: settings.freeDeliveryAbove != null ? settings.freeDeliveryAbove : COD_FREE_THRESHOLD,
+    codDeliveryFee: settings.deliveryFee != null ? settings.deliveryFee : COD_DELIVERY_FEE,
   };
 };
 

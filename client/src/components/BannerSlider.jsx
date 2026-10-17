@@ -41,6 +41,7 @@ export default function BannerSlider({ banners = [] }) {
             to={bn.ctaLink || '/products'}
             aria-hidden={i !== index}
             tabIndex={i === index ? 0 : -1}
+            style={bn.bgColor ? { backgroundColor: bn.bgColor } : undefined}
             className={`absolute inset-0 transition-opacity duration-700 ${i === index ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           >
             <img

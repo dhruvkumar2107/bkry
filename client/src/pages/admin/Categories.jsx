@@ -5,7 +5,7 @@ import { toast } from '../../store/toast.js';
 import { Modal, ConfirmDialog, PageLoader, Field, EmptyState } from '../../components/ui.jsx';
 import ImageUploader from '../../components/ImageUploader.jsx';
 
-const empty = () => ({ name: '', description: '', imageUrl: '', icon: '', isActive: true, showOnHome: true, sortOrder: 0 });
+const empty = () => ({ name: '', description: '', imageUrl: '', bannerUrl: '', icon: '', isActive: true, showOnHome: true, sortOrder: 0 });
 
 export default function AdminCategories() {
   const [items, setItems] = useState([]);
@@ -19,7 +19,7 @@ export default function AdminCategories() {
   useEffect(load, []);
 
   const openCreate = () => { setForm({ ...empty(), sortOrder: items.length }); setEditing('new'); };
-  const openEdit = (c) => { setForm({ name: c.name, description: c.description || '', imageUrl: c.imageUrl || '', icon: c.icon || '', isActive: c.isActive, showOnHome: c.showOnHome, sortOrder: c.sortOrder }); setEditing(c.id); };
+  const openEdit = (c) => { setForm({ name: c.name, description: c.description || '', imageUrl: c.imageUrl || '', bannerUrl: c.bannerUrl || '', icon: c.icon || '', isActive: c.isActive, showOnHome: c.showOnHome, sortOrder: c.sortOrder }); setEditing(c.id); };
 
   const save = async () => {
     if (!form.name) return toast.error('Name is required');
@@ -94,8 +94,13 @@ export default function AdminCategories() {
             <Field label="Sort order"><input type="number" className="input" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} /></Field>
           </div>
           <div>
-            <p className="label">Image</p>
+            <p className="label">Category Image / Thumbnail</p>
             <ImageUploader single images={form.imageUrl ? [{ url: form.imageUrl }] : []} onChange={(imgs) => setForm({ ...form, imageUrl: imgs[0]?.url || '' })} />
+          </div>
+          <div>
+            <p className="label">Category Header Banner (optional)</p>
+            <p className="text-xs text-slate-400 mb-1.5">Displayed as the hero banner at the top of this category's page.</p>
+            <ImageUploader single images={form.bannerUrl ? [{ url: form.bannerUrl }] : []} onChange={(imgs) => setForm({ ...form, bannerUrl: imgs[0]?.url || '' })} />
           </div>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="h-4 w-4" /> Active</label>
