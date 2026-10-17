@@ -53,6 +53,19 @@ if (!env.isProd) app.use(morgan('dev'));
 // absolute URLs so this is unused when STORAGE_DRIVER=cloudinary).
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));
 
+// Dynamic API responses must never be cached by browsers or CDNs. Without this,
+// proxies (and Vercel's edge) may mark GET responses "public, must-revalidate"
+// and the storefront can keep showing stale prices/stock/settings after an admin
+// edit. Routes that DO want caching (e.g. /api/placeholder SVGs) override these
+// headers explicitly.
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Basic API rate limiting
 app.use(
   '/api/auth',

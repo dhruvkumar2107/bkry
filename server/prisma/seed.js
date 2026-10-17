@@ -312,7 +312,7 @@ async function main() {
     closeTime: '22:00',
     deliveryFee: 30,
     freeDeliveryAbove: 500,
-    minOrderAmount: 100,
+    minOrderAmount: 0,
     taxPercent: 5,
     taxEnabled: true,
     codEnabled: true,

@@ -66,7 +66,7 @@ export const env = {
   defaults: {
     deliveryFee: num(process.env.DELIVERY_FEE, 30),
     freeDeliveryAbove: num(process.env.FREE_DELIVERY_ABOVE, 500),
-    minOrderAmount: num(process.env.MIN_ORDER_AMOUNT, 100),
+    minOrderAmount: num(process.env.MIN_ORDER_AMOUNT, 0),
     taxPercent: num(process.env.TAX_PERCENT, 5),
   },
 };

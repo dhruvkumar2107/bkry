@@ -26,8 +26,7 @@ export const DEFAULT_SETTINGS = {
 
   // Pricing, Tax & Delivery Charges
   deliveryFee: 40,
-  freeDeliveryAbove: 999,
-  minOrderAmount: env.defaults.minOrderAmount,
+  minOrderAmount: 0,
   taxPercent: 0,
   taxEnabled: false,
   codEnabled: false,

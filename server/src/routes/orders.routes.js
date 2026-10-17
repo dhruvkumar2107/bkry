@@ -123,9 +123,6 @@ router.post(
     }
 
     const totals = computeTotals({ items: priced, coupon, settings, paymentMethod: body.paymentMethod });
-    if (settings.minOrderAmount && totals.subtotal < settings.minOrderAmount) {
-      throw new ApiError(400, `Minimum order amount is ₹${settings.minOrderAmount}`);
-    }
 
     if (body.paymentMethod === 'ONLINE' && !env.razorpay.enabled) {
       throw new ApiError(400, 'Online payment is not configured. Please choose Cash on Delivery.');

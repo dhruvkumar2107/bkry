@@ -90,6 +90,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
     Promise.all([
       api.get('/catalog/settings/public'),
       api.get('/cart', { params: { coupon: couponCode || undefined } }),
@@ -150,6 +151,13 @@ export default function CheckoutPage() {
   };
 
   const placeOrder = async () => {
+    if (!phone && !user?.phone) {
+      const el = document.getElementById('checkout-phone-input');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el?.focus();
+      return toast.error('Please enter your contact phone number');
+    }
+
     const useSaved = selectedAddrId !== 'new';
     let address;
     if (useSaved) {
@@ -157,7 +165,12 @@ export default function CheckoutPage() {
       if (!a) return toast.error('Please select an address');
       address = { addressId: a.id };
     } else {
-      if (!manual.line1) return toast.error('Please enter your delivery address');
+      if (!manual.line1) {
+        const el = document.getElementById('checkout-line1-input');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+        return toast.error('Please enter your delivery address');
+      }
       address = { address: manual, deliveryInstructions: instructions };
     }
     // Persist the chosen location locally for next visit.
@@ -166,7 +179,7 @@ export default function CheckoutPage() {
     setPlacing(true);
     try {
       const payload = {
-        customerName: name || user?.name,
+        customerName: name || user?.name || 'Customer',
         customerPhone: phone || user?.phone,
         paymentMethod: payment,
         couponCode: couponCode || undefined,
@@ -212,8 +225,8 @@ export default function CheckoutPage() {
     }
   };
 
-  if (loading) return <PageLoader />;
-  if (!cart.items.length)
+  if (loading && !cart.items.length) return <PageLoader />;
+  if (!loading && !cart.items.length)
     return (
       <EmptyState
         title="Your cart is empty"
@@ -221,38 +234,46 @@ export default function CheckoutPage() {
       />
     );
 
+  const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
+  const threshold = 999;
+  const isFree = afterDiscount >= threshold;
+  const deliveryCharge = isFree ? 0 : 40;
+  const diffToFree = isFree ? 0 : threshold - afterDiscount;
+  const payableTotal = Math.round((afterDiscount + deliveryCharge) * 100) / 100;
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-5">
-        <h1 className="font-brand text-2xl font-bold">Checkout</h1>
+    <div className="relative pb-24 lg:pb-8">
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-5">
+          <h1 className="font-brand text-2xl font-bold">Checkout</h1>
 
-        {!user && settings?.guestCheckoutEnabled && (
-          <div className="card p-5">
-            <h3 className="font-semibold">Contact details</h3>
-            <p className="mb-3 text-xs text-slate-400">
-              You&apos;re checking out as a guest.{' '}
-              <Link to="/login" className="text-brand-700">Log in</Link> to save your addresses.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Full name">
-                <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-              </Field>
-              <Field label="Mobile number">
-                <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </Field>
+          {!user && settings?.guestCheckoutEnabled && (
+            <div className="card p-5">
+              <h3 className="font-semibold">Contact details</h3>
+              <p className="mb-3 text-xs text-slate-400">
+                You&apos;re checking out as a guest.{' '}
+                <Link to="/login" className="text-brand-700">Log in</Link> to save your addresses.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Full name">
+                  <input id="checkout-name-input" className="input" value={name} onChange={(e) => setName(e.target.value)} />
+                </Field>
+                <Field label="Mobile number">
+                  <input id="checkout-phone-input" type="tel" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </Field>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 font-semibold">
-              <MapPin className="h-4 w-4 text-brand-600" /> Delivery address
-            </h3>
-            <button onClick={currentLoc} disabled={locating} className="btn-outline py-1.5 text-xs">
-              <LocateFixed className="h-3.5 w-3.5" /> {locating ? 'Locating…' : 'Use My Current Location'}
-            </button>
-          </div>
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <MapPin className="h-4 w-4 text-brand-600" /> Delivery address
+              </h3>
+              <button type="button" onClick={currentLoc} disabled={locating} className="btn-outline py-1.5 text-xs">
+                <LocateFixed className="h-3.5 w-3.5" /> {locating ? 'Locating…' : 'Use My Current Location'}
+              </button>
+            </div>
 
           {addresses.length > 0 && (
             <div className="mt-3 space-y-2">
@@ -301,6 +322,7 @@ export default function CheckoutPage() {
             <div className="mt-3 space-y-3">
               <Field label="Address line 1">
                 <input
+                  id="checkout-line1-input"
                   className="input"
                   value={manual.line1}
                   onChange={(e) => setManual({ ...manual, line1: e.target.value })}
@@ -325,6 +347,7 @@ export default function CheckoutPage() {
                 </Field>
                 <Field label="Pincode">
                   <input
+                    id="checkout-pincode-input"
                     className="input"
                     value={manual.pincode}
                     onChange={(e) => setManual({ ...manual, pincode: e.target.value })}
@@ -374,84 +397,98 @@ export default function CheckoutPage() {
       </div>
 
       {/* Order summary sidebar */}
-      {(() => {
-        const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
-        const threshold = 999;
-        const isFree = afterDiscount >= threshold;
-        const deliveryCharge = isFree ? 0 : 40;
-        const diffToFree = isFree ? 0 : threshold - afterDiscount;
-        const payableTotal = Math.round((afterDiscount + deliveryCharge) * 100) / 100;
+      <div className="lg:sticky lg:top-24 lg:h-fit">
+        <div className="card p-5">
+          <h3 className="font-semibold">Order summary</h3>
+          <ul className="mt-3 space-y-2 text-sm">
+            {cart.items.map((it) => (
+              <li key={it.id} className="flex justify-between gap-2">
+                <span className="text-slate-600">
+                  {it.name} <span className="text-slate-400">× {it.quantity}</span>
+                </span>
+                <span className="font-medium">{inr(it.lineTotal)}</span>
+              </li>
+            ))}
+          </ul>
 
-        return (
-          <div className="lg:sticky lg:top-24 lg:h-fit">
-            <div className="card p-5">
-              <h3 className="font-semibold">Order summary</h3>
-              <ul className="mt-3 space-y-2 text-sm">
-                {cart.items.map((it) => (
-                  <li key={it.id} className="flex justify-between gap-2">
-                    <span className="text-slate-600">
-                      {it.name} <span className="text-slate-400">× {it.quantity}</span>
-                    </span>
-                    <span className="font-medium">{inr(it.lineTotal)}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {diffToFree > 0 ? (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
-                  <p className="font-medium">
-                    Add {inr(diffToFree)} more to get Free Delivery!
-                  </p>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-amber-200">
-                    <div
-                      className="h-full bg-amber-600 transition-all duration-300"
-                      style={{ width: `${Math.min(100, Math.round((afterDiscount / threshold) * 100))}%` }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-800 flex items-center justify-between">
-                  <span>🎉 Free Delivery</span>
-                  <span className="text-[11px] text-green-600">On orders ₹999+</span>
-                </div>
-              )}
-
-              <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-200 pt-4 text-sm">
-                <div className="flex justify-between text-slate-500">
-                  <span>Subtotal</span><span>{inr(cart.subtotal)}</span>
-                </div>
-                {cart.discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount</span><span>− {inr(cart.discount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-500">
-                  <span>Delivery</span>
-                  <span className={isFree ? 'font-semibold text-green-600' : 'font-medium text-slate-700'}>
-                    {isFree ? 'Free Delivery' : inr(deliveryCharge)}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-bold">
-                  <span>Total</span><span>{inr(payableTotal)}</span>
-                </div>
-              </div>
-
-              <button onClick={placeOrder} disabled={placing} className="btn-primary mt-4 w-full py-3">
-                {placing ? (
-                  'Opening Razorpay…'
-                ) : (
-                  <>
-                    <Lock className="h-4 w-4" /> Pay with Razorpay · {inr(payableTotal)}
-                  </>
-                )}
-              </button>
-              <p className="mt-2 text-center text-xs text-slate-400">
-                100% secure payment powered by Razorpay.
+          {diffToFree > 0 ? (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+              <p className="font-medium">
+                Add {inr(diffToFree)} more to get Free Delivery!
               </p>
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-amber-200">
+                <div
+                  className="h-full bg-amber-600 transition-all duration-300"
+                  style={{ width: `${Math.min(100, Math.round((afterDiscount / threshold) * 100))}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-800 flex items-center justify-between">
+              <span>🎉 Free Delivery</span>
+              <span className="text-[11px] text-green-600">On orders ₹999+</span>
+            </div>
+          )}
+
+          <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-200 pt-4 text-sm">
+            <div className="flex justify-between text-slate-500">
+              <span>Subtotal</span><span>{inr(cart.subtotal)}</span>
+            </div>
+            {cart.discount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>Discount</span><span>− {inr(cart.discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-slate-500">
+              <span>Delivery</span>
+              <span className={isFree ? 'font-semibold text-green-600' : 'font-medium text-slate-700'}>
+                {isFree ? 'Free Delivery' : inr(deliveryCharge)}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-bold">
+              <span>Total</span><span>{inr(payableTotal)}</span>
             </div>
           </div>
-        );
-      })()}
+
+          <button onClick={placeOrder} disabled={placing} className="btn-primary mt-4 w-full py-3">
+            {placing ? (
+              'Opening Razorpay…'
+            ) : (
+              <>
+                <Lock className="h-4 w-4" /> Pay with Razorpay · {inr(payableTotal)}
+              </>
+            )}
+          </button>
+          <p className="mt-2 text-center text-xs text-slate-400">
+            100% secure payment powered by Razorpay.
+          </p>
+        </div>
+      </div>
     </div>
+
+    {/* Sticky Bottom Bar for Mobile Viewports: Never scroll down just to pay */}
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 p-3.5 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur-md lg:hidden">
+      <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Payable</p>
+          <p className="text-lg font-bold text-slate-900 leading-tight">{inr(payableTotal)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={placeOrder}
+          disabled={placing}
+          className="btn-primary flex-1 py-3 justify-center text-sm font-semibold shadow-md active:scale-95 transition-transform"
+        >
+          {placing ? (
+            'Opening Razorpay…'
+          ) : (
+            <>
+              <Lock className="h-4 w-4" /> Pay with Razorpay
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
   );
 }

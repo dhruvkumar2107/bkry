@@ -34,8 +34,6 @@ export default function CartPage() {
     return <EmptyState title="Your cart is empty" subtitle="Add some delicious sweets to get started." action={<Link to="/products" className="btn-primary">Browse products</Link>} />;
   }
 
-  const belowMin = cart.subtotal < (cart.minOrderAmount || 0);
-
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div>
@@ -112,13 +110,7 @@ export default function CartPage() {
             </div>
           </div>
 
-          {belowMin && (
-            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              Add {inr((cart.minOrderAmount || 0) - cart.subtotal)} more to reach the minimum order of {inr(cart.minOrderAmount)}.
-            </p>
-          )}
-
-          <button disabled={belowMin} onClick={() => nav('/checkout')} className="btn-primary mt-4 w-full py-3">
+          <button onClick={() => nav('/checkout')} className="btn-primary mt-4 w-full py-3">
             Proceed to Checkout <ArrowRight className="h-4 w-4" />
           </button>
         </div>
