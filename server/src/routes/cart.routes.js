@@ -29,7 +29,7 @@ const getOrCreateCart = async (req, res) => {
   return cart;
 };
 
-const serializeCart = async (cart, couponCode, paymentMethod = 'COD') => {
+const serializeCart = async (cart, couponCode, paymentMethod = 'ONLINE') => {
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
     include: {
@@ -56,7 +56,7 @@ const serializeCart = async (cart, couponCode, paymentMethod = 'COD') => {
     if (check.ok) coupon = found;
   }
 
-  const totals = computeTotals({ items: priced, coupon, settings, paymentMethod: paymentMethod || 'COD' });
+  const totals = computeTotals({ items: priced, coupon, settings });
 
   return {
     id: cart.id,
@@ -75,9 +75,9 @@ const serializeCart = async (cart, couponCode, paymentMethod = 'COD') => {
     })),
     coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     ...totals,
-    paymentMethod: paymentMethod || 'COD',
+    paymentMethod: paymentMethod || 'ONLINE',
     minOrderAmount: settings.minOrderAmount,
-    freeDeliveryAbove: settings.freeDeliveryAbove,
+    freeDeliveryAbove: COD_FREE_THRESHOLD,
     codFreeDeliveryAbove: COD_FREE_THRESHOLD,
     codDeliveryFee: COD_DELIVERY_FEE,
   };

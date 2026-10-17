@@ -3,7 +3,17 @@ import prisma from '../src/lib/prisma.js';
 const BASE = 'http://localhost:4000/api';
 
 async function run() {
-  console.log('--- Testing Payment, Pricing & COD Rules ---');
+  console.log('--- Testing Payment, Pricing & Online Delivery Rules ---');
+
+  // Verify Logo URLs
+  const settingsRes = await fetch(`${BASE}/catalog/settings/public`);
+  const settingsData = await settingsRes.json();
+  const s = settingsData.settings;
+  console.log('Shop Logo URL:', s.logoUrl);
+  if (!s.logoUrl.includes('logo.svg')) {
+    throw new Error('Expected logoUrl to include logo.svg, got: ' + s.logoUrl);
+  }
+  console.log('✓ Test 0 Passed: Logo 2 (/logo.svg) is the active storefront logo in public settings');
 
   // Find a product variant to add to cart
   const variant = await prisma.productVariant.findFirst({
@@ -17,9 +27,8 @@ async function run() {
 
   console.log(`Using product: ${variant.product.name} - ${variant.label} (₹${variant.price})`);
 
-  // --- Test 1: COD order < ₹999 -> ₹40 delivery fee, 0 tax ---
-  const guestToken1 = 'test_guest_cod_under_' + Date.now();
-  // Add 1 item
+  // --- Test 1: Online order < ₹999 -> ₹40 delivery fee, 0 tax ---
+  const guestToken1 = 'test_guest_online_under_' + Date.now();
   const addRes1 = await fetch(`${BASE}/cart/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken1 },
@@ -32,24 +41,24 @@ async function run() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken1 },
     body: JSON.stringify({
-      customerName: 'Test COD Under',
+      customerName: 'Test Online Under',
       customerPhone: '9876543210',
-      paymentMethod: 'COD',
+      paymentMethod: 'ONLINE',
       address: { line1: '123 Sweet Lane', city: 'Bijapur', pincode: '586101' },
     }),
   });
   const orderData1 = await checkoutRes1.json();
-  if (!orderData1.success) throw new Error('COD Checkout 1 failed: ' + JSON.stringify(orderData1));
+  if (!orderData1.success) throw new Error('Checkout 1 failed: ' + JSON.stringify(orderData1));
   const o1 = orderData1.order;
 
-  console.log(`Order 1 (COD < ₹999): subtotal=${o1.subtotal}, deliveryFee=${o1.deliveryFee}, tax=${o1.taxAmount}, total=${o1.total}`);
+  console.log(`Order 1 (ONLINE < ₹999): subtotal=${o1.subtotal}, deliveryFee=${o1.deliveryFee}, tax=${o1.taxAmount}, total=${o1.total}`);
   if (o1.taxAmount !== 0) throw new Error(`Expected taxAmount to be 0, got ${o1.taxAmount}`);
   if (o1.subtotal < 999 && o1.deliveryFee !== 40) throw new Error(`Expected deliveryFee to be 40, got ${o1.deliveryFee}`);
   if (o1.total !== o1.subtotal + 40 - o1.discount) throw new Error(`Total mismatch: ${o1.total} != ${o1.subtotal + 40}`);
-  console.log('✓ Test 1 Passed: COD < ₹999 charges ₹40 delivery, 0 tax');
+  console.log('✓ Test 1 Passed: Online order < ₹999 charges flat ₹40 delivery, 0 tax');
 
-  // --- Test 2: COD order >= ₹999 -> ₹0 delivery fee (FREE), 0 tax ---
-  const guestToken2 = 'test_guest_cod_over_' + Date.now();
+  // --- Test 2: Online order >= ₹999 -> ₹0 delivery fee (FREE), 0 tax ---
+  const guestToken2 = 'test_guest_online_over_' + Date.now();
   const qtyForOver999 = Math.ceil(1000 / variant.price);
   await fetch(`${BASE}/cart/items`, {
     method: 'POST',
@@ -61,52 +70,29 @@ async function run() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken2 },
     body: JSON.stringify({
-      customerName: 'Test COD Free',
+      customerName: 'Test Online Free',
       customerPhone: '9876543211',
-      paymentMethod: 'COD',
+      paymentMethod: 'ONLINE',
       address: { line1: '456 Royal Sweet Road', city: 'Bijapur', pincode: '586101' },
     }),
   });
   const orderData2 = await checkoutRes2.json();
-  if (!orderData2.success) throw new Error('COD Checkout 2 failed: ' + JSON.stringify(orderData2));
+  if (!orderData2.success) throw new Error('Checkout 2 failed: ' + JSON.stringify(orderData2));
   const o2 = orderData2.order;
 
-  console.log(`Order 2 (COD >= ₹999): subtotal=${o2.subtotal}, deliveryFee=${o2.deliveryFee}, tax=${o2.taxAmount}, total=${o2.total}`);
+  console.log(`Order 2 (ONLINE >= ₹999): subtotal=${o2.subtotal}, deliveryFee=${o2.deliveryFee}, tax=${o2.taxAmount}, total=${o2.total}`);
   if (o2.subtotal < 999) throw new Error(`Test setup error: subtotal should be >= 999, was ${o2.subtotal}`);
   if (o2.deliveryFee !== 0) throw new Error(`Expected free delivery (0), got ${o2.deliveryFee}`);
   if (o2.taxAmount !== 0) throw new Error(`Expected taxAmount to be 0, got ${o2.taxAmount}`);
   if (o2.total !== o2.subtotal - o2.discount) throw new Error(`Total mismatch: ${o2.total} != ${o2.subtotal}`);
-  console.log('✓ Test 2 Passed: COD >= ₹999 gives FREE delivery (₹0), 0 tax');
+  console.log('✓ Test 2 Passed: Online order >= ₹999 gives FREE delivery (₹0), 0 tax');
 
-  // --- Test 3: Guest Online Razorpay Order -> NO 401 Unauthorized error ---
-  const guestToken3 = 'test_guest_online_' + Date.now();
-  await fetch(`${BASE}/cart/items`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken3 },
-    body: JSON.stringify({ variantId: variant.id, quantity: 1 }),
-  });
-
-  const checkoutRes3 = await fetch(`${BASE}/orders/checkout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken3 },
-    body: JSON.stringify({
-      customerName: 'Test Online Guest',
-      customerPhone: '9876543212',
-      paymentMethod: 'ONLINE',
-      address: { line1: '789 Digital Highway', city: 'Bijapur', pincode: '586101' },
-    }),
-  });
-  const orderData3 = await checkoutRes3.json();
-  if (!orderData3.success) throw new Error('Online Checkout failed: ' + JSON.stringify(orderData3));
-  const o3 = orderData3.order;
-  console.log(`Order 3 created: ${o3.orderNumber}, total=₹${o3.total}`);
-
-  // Now call /api/payments/razorpay/create AS GUEST (no Authorization header)
-  console.log(`Calling /api/payments/razorpay/create for order ${o3.orderNumber} without JWT token...`);
+  // --- Test 3: Razorpay create endpoint creates real order without 401 ---
+  console.log(`Calling /api/payments/razorpay/create for order ${o1.orderNumber} without JWT token...`);
   const rpCreateRes = await fetch(`${BASE}/payments/razorpay/create`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken3 },
-    body: JSON.stringify({ orderNumber: o3.orderNumber }),
+    headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken1 },
+    body: JSON.stringify({ orderNumber: o1.orderNumber }),
   });
 
   if (rpCreateRes.status === 401) {
@@ -119,21 +105,45 @@ async function run() {
   }
 
   console.log(`✓ Razorpay order successfully created: ${rpData.razorpayOrderId}, amount=₹${rpData.amount}, keyId=${rpData.keyId}`);
-  if (rpData.amount !== o3.total) {
-    throw new Error(`Amount mismatch: Razorpay amount ${rpData.amount} != order total ${o3.total}`);
+  if (rpData.amount !== o1.total) {
+    throw new Error(`Amount mismatch: Razorpay amount ${rpData.amount} != order total ${o1.total}`);
   }
   console.log('✓ Test 3 Passed: Razorpay order created for guest without 401! Amounts match exactly.');
 
-  // Clean up test orders
-  await prisma.notification.deleteMany({ where: { orderId: { in: [o1.id, o2.id, o3.id] } } });
-  await prisma.payment.deleteMany({ where: { orderId: { in: [o1.id, o2.id, o3.id] } } });
-  await prisma.orderItem.deleteMany({ where: { orderId: { in: [o1.id, o2.id, o3.id] } } });
-  await prisma.orderDeliveryAddress.deleteMany({ where: { orderId: { in: [o1.id, o2.id, o3.id] } } });
-  await prisma.orderStatusHistory.deleteMany({ where: { orderId: { in: [o1.id, o2.id, o3.id] } } });
-  await prisma.order.deleteMany({ where: { id: { in: [o1.id, o2.id, o3.id] } } });
-  await prisma.cart.deleteMany({ where: { guestToken: { in: [guestToken1, guestToken2, guestToken3] } } });
+  // --- Test 4: COD is rejected when disabled ---
+  const guestToken4 = 'test_guest_cod_rejected_' + Date.now();
+  await fetch(`${BASE}/cart/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken4 },
+    body: JSON.stringify({ variantId: variant.id, quantity: 1 }),
+  });
 
-  console.log('--- All Payment, Pricing & COD Tests Passed Flawlessly! ---');
+  const checkoutRes4 = await fetch(`${BASE}/orders/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-guest-token': guestToken4 },
+    body: JSON.stringify({
+      customerName: 'Test COD Blocked',
+      customerPhone: '9876543219',
+      paymentMethod: 'COD',
+      address: { line1: '789 Block Lane', city: 'Bijapur', pincode: '586101' },
+    }),
+  });
+
+  if (checkoutRes4.status === 201) {
+    throw new Error('COD should be rejected when codEnabled is false!');
+  }
+  console.log(`✓ Test 4 Passed: COD correctly blocked with status ${checkoutRes4.status} (only online payment allowed)`);
+
+  // Clean up test orders
+  await prisma.notification.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+  await prisma.payment.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+  await prisma.orderItem.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+  await prisma.orderDeliveryAddress.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+  await prisma.orderStatusHistory.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+  await prisma.order.deleteMany({ where: { id: { in: [o1.id, o2.id] } } });
+  await prisma.cart.deleteMany({ where: { guestToken: { in: [guestToken1, guestToken2, guestToken4] } } });
+
+  console.log('--- All Payment, Pricing & Online Delivery Tests Passed Flawlessly! ---');
   await prisma.$disconnect();
 }
 

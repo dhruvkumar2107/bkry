@@ -5,9 +5,9 @@ export const DEFAULT_SETTINGS = {
   // Brand & Shop Identity
   shopName: 'Chotulal Sweets',
   tagline: 'Fresh Sweets, Made with Love',
-  logoUrl: '',
-  mobileLogoUrl: '',
-  faviconUrl: '',
+  logoUrl: '/logo.svg',
+  mobileLogoUrl: '/logo.svg',
+  faviconUrl: '/favicon.ico',
   footerText: '',
 
   // Announcement Bar
@@ -25,12 +25,12 @@ export const DEFAULT_SETTINGS = {
   googleMapsUrl: '',
 
   // Pricing, Tax & Delivery Charges
-  deliveryFee: env.defaults.deliveryFee,
-  freeDeliveryAbove: env.defaults.freeDeliveryAbove,
+  deliveryFee: 40,
+  freeDeliveryAbove: 999,
   minOrderAmount: env.defaults.minOrderAmount,
-  taxPercent: env.defaults.taxPercent,
-  taxEnabled: true,
-  codEnabled: true,
+  taxPercent: 0,
+  taxEnabled: false,
+  codEnabled: false,
   onlinePaymentEnabled: env.razorpay.enabled,
   guestCheckoutEnabled: true,
 

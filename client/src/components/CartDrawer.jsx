@@ -87,7 +87,7 @@ export default function CartDrawer() {
           <div className="border-t border-slate-100 px-5 py-4">
             {(() => {
               const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
-              const threshold = cart.codFreeDeliveryAbove || 999;
+              const threshold = cart.freeDeliveryAbove || 999;
               if (afterDiscount < threshold) {
                 const diff = threshold - afterDiscount;
                 return (

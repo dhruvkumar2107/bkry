@@ -1,28 +1,23 @@
 import { round2 } from '../utils/helpers.js';
 
-// COD delivery fee rules:
-// - subtotal >= COD_FREE_THRESHOLD → free delivery
-// - subtotal < COD_FREE_THRESHOLD → flat ₹40 fee
+// Delivery fee rules:
+// - subtotal (after discount) >= FREE_DELIVERY_THRESHOLD (999) → free delivery (₹0)
+// - subtotal (after discount) < FREE_DELIVERY_THRESHOLD (999) → flat ₹40 fee
+export const FREE_DELIVERY_THRESHOLD = 999;
+export const STANDARD_DELIVERY_FEE = 40;
 export const COD_FREE_THRESHOLD = 999;
 export const COD_DELIVERY_FEE = 40;
 
-// Calculates delivery fee based on payment method and subtotal.
-// For COD: free at/above ₹999, ₹40 below.
-// For ONLINE: uses settings.deliveryFee, free if subtotal >= settings.freeDeliveryAbove.
-export const calcDeliveryFee = ({ subtotal, paymentMethod, settings }) => {
-  if (paymentMethod === 'COD') {
-    return subtotal >= COD_FREE_THRESHOLD ? 0 : COD_DELIVERY_FEE;
-  }
-  // ONLINE payment
-  let fee = settings.deliveryFee ?? 0;
-  if (settings.freeDeliveryAbove && subtotal >= settings.freeDeliveryAbove) fee = 0;
-  return fee;
+// Calculates delivery fee based on subtotal (after discount).
+// Below ₹999: ₹40. At or above ₹999: Free (₹0).
+export const calcDeliveryFee = ({ subtotal }) => {
+  return Number(subtotal) >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_FEE;
 };
 
 // Recomputes an order's totals from authoritative variant prices. The browser
 // never dictates prices, discounts, or totals - only variant ids and quantities.
 // Tax is NOT added to customer-facing totals per business requirement.
-export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride, paymentMethod }) => {
+export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride }) => {
   let subtotal = 0;
   const lines = [];
   for (const item of items) {
@@ -52,20 +47,15 @@ export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride, pa
 
   const afterDiscount = round2(subtotal - discount);
 
-  // Delivery fee: use override if provided, else use payment-method-aware calc.
+  // Delivery fee: ₹40 below ₹999, free on ₹999+
   let deliveryFee;
   if (deliveryFeeOverride !== undefined && deliveryFeeOverride !== null) {
     deliveryFee = deliveryFeeOverride;
-  } else if (paymentMethod) {
-    deliveryFee = calcDeliveryFee({ subtotal, paymentMethod, settings });
   } else {
-    // Fallback: use settings-based fee (for cart display without known payment method)
-    deliveryFee = settings.deliveryFee ?? 0;
-    if (settings.freeDeliveryAbove && subtotal >= settings.freeDeliveryAbove) deliveryFee = 0;
+    deliveryFee = calcDeliveryFee({ subtotal: afterDiscount, settings });
   }
 
   // Tax is NOT applied to customer-facing totals.
-  // taxPercent/taxAmount are preserved for admin/accounting only.
   const taxPercent = 0;
   const taxAmount = 0;
 

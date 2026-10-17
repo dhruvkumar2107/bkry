@@ -23,7 +23,7 @@ const loadRazorpayScript = () =>
 
 // Opens the Razorpay payment modal and waits for success or dismissal.
 // Returns { paid: true } on success, { paid: false } otherwise.
-const openRazorpayModal = (rz, orderNumber) =>
+const openRazorpayModal = (rz, orderNumber, prefill = {}) =>
   new Promise((resolve) => {
     const options = {
       key: rz.keyId,
@@ -31,6 +31,7 @@ const openRazorpayModal = (rz, orderNumber) =>
       currency: 'INR',
       name: 'Chotulal Sweets',
       description: `Order ${orderNumber}`,
+      image: `${window.location.origin}/logo.svg`,
       order_id: rz.razorpayOrderId,
       handler: async (response) => {
         try {
@@ -42,7 +43,10 @@ const openRazorpayModal = (rz, orderNumber) =>
           resolve({ paid: false });
         }
       },
-      prefill: {},
+      prefill: {
+        name: prefill.name || '',
+        contact: prefill.phone || '',
+      },
       theme: { color: '#b45309' }, // brand amber
       modal: {
         ondismiss: () => resolve({ paid: false }),
@@ -80,7 +84,7 @@ export default function CheckoutPage() {
   const [instructions, setInstructions] = useState(location?.instructions || '');
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [payment, setPayment] = useState('COD');
+  const [payment, setPayment] = useState('ONLINE');
   const [placing, setPlacing] = useState(false);
   const [locating, setLocating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -93,10 +97,7 @@ export default function CheckoutPage() {
     ]).then(([s, c, a]) => {
       setSettings(s.data.settings);
       setAddresses(a.data.addresses);
-      // Default to ONLINE if COD is off but online is on.
-      if (!s.data.settings.codEnabled && s.data.settings.onlinePaymentEnabled) {
-        setPayment('ONLINE');
-      }
+      setPayment('ONLINE');
       const def = a.data.addresses.find((x) => x.isDefault) || a.data.addresses[0];
       if (def) setSelectedAddrId(def.id);
     }).finally(() => setLoading(false));
@@ -182,7 +183,10 @@ export default function CheckoutPage() {
           const rz = await api.post('/payments/razorpay/create', {
             orderNumber: order.orderNumber,
           });
-          const { paid } = await openRazorpayModal(rz.data, order.orderNumber);
+          const { paid } = await openRazorpayModal(rz.data, order.orderNumber, {
+            name: name || user?.name || '',
+            phone: phone || user?.phone || '',
+          });
           if (!paid) {
             toast.info('Payment was not completed. You can retry from your order page.');
           }
@@ -345,58 +349,21 @@ export default function CheckoutPage() {
 
         <div className="card p-5">
           <h3 className="font-semibold">Payment method</h3>
-          <div className="mt-3 space-y-2">
-            {settings?.codEnabled && (
-              <label
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
-                  payment === 'COD' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'
-                }`}
-              >
-                <input type="radio" name="pay" checked={payment === 'COD'} onChange={() => setPayment('COD')} />
-                <Wallet className="h-5 w-5 text-brand-600" />
-                <div className="text-sm flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold">Cash on Delivery</p>
-                    <span className="text-xs font-medium text-brand-700">
-                      {Math.max(0, (cart.subtotal || 0) - (cart.discount || 0)) >= 999 ? 'Free Delivery' : '₹40 Delivery'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">Pay cash upon delivery at your doorstep</p>
+          <div className="mt-3">
+            <div className="flex items-center gap-3.5 rounded-2xl border-2 border-brand-500 bg-brand-50/70 p-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white shrink-0 shadow-xs">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div className="text-sm flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-bold text-slate-900">Online Payment (Razorpay)</p>
+                  <span className="shrink-0 text-[11px] font-semibold text-brand-700 bg-brand-100 px-2 py-0.5 rounded-full">
+                    Instant & Secure
+                  </span>
                 </div>
-              </label>
-            )}
-            {settings?.onlinePaymentEnabled ? (
-              <label
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
-                  payment === 'ONLINE' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="pay"
-                  checked={payment === 'ONLINE'}
-                  onChange={() => setPayment('ONLINE')}
-                />
-                <CreditCard className="h-5 w-5 text-brand-600" />
-                <div className="text-sm flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold">Online Payment (Razorpay)</p>
-                    <span className="text-xs font-medium text-brand-700">
-                      {(() => {
-                        const sub = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
-                        const freeOnline = settings?.freeDeliveryAbove && sub >= settings.freeDeliveryAbove;
-                        return freeOnline ? 'Free Delivery' : (settings?.deliveryFee ? inr(settings.deliveryFee) : 'Free Delivery');
-                      })()}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">UPI, Credit/Debit Cards, Net Banking & Wallets</p>
-                </div>
-              </label>
-            ) : (
-              <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-400">
-                Online payment is not configured yet. Add Razorpay keys in server/.env to enable it.
-              </p>
-            )}
+                <p className="text-xs text-slate-500 mt-0.5">UPI (Google Pay, PhonePe, Paytm), Cards & Net Banking</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -404,32 +371,10 @@ export default function CheckoutPage() {
       {/* Order summary sidebar */}
       {(() => {
         const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
-        let deliveryCharge = 0;
-        let isFree = false;
-        let diffToFree = 0;
-
-        if (payment === 'COD') {
-          const threshold = 999;
-          if (afterDiscount >= threshold) {
-            deliveryCharge = 0;
-            isFree = true;
-          } else {
-            deliveryCharge = 40;
-            diffToFree = threshold - afterDiscount;
-          }
-        } else {
-          // ONLINE
-          const threshold = settings?.freeDeliveryAbove || 0;
-          if (threshold && afterDiscount >= threshold) {
-            deliveryCharge = 0;
-            isFree = true;
-          } else {
-            deliveryCharge = settings?.deliveryFee ?? 0;
-            if (deliveryCharge === 0) isFree = true;
-            else if (threshold) diffToFree = threshold - afterDiscount;
-          }
-        }
-
+        const threshold = 999;
+        const isFree = afterDiscount >= threshold;
+        const deliveryCharge = isFree ? 0 : 40;
+        const diffToFree = isFree ? 0 : threshold - afterDiscount;
         const payableTotal = Math.round((afterDiscount + deliveryCharge) * 100) / 100;
 
         return (
@@ -455,16 +400,16 @@ export default function CheckoutPage() {
                   <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-amber-200">
                     <div
                       className="h-full bg-amber-600 transition-all duration-300"
-                      style={{ width: `${Math.min(100, Math.round((afterDiscount / (afterDiscount + diffToFree)) * 100))}%` }}
+                      style={{ width: `${Math.min(100, Math.round((afterDiscount / threshold) * 100))}%` }}
                     />
                   </div>
                 </div>
-              ) : isFree ? (
+              ) : (
                 <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-800 flex items-center justify-between">
                   <span>🎉 Free Delivery</span>
-                  <span className="text-[11px] text-green-600">{payment === 'COD' ? 'COD on ₹999+' : 'Free Delivery'}</span>
+                  <span className="text-[11px] text-green-600">On orders ₹999+</span>
                 </div>
-              ) : null}
+              )}
 
               <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-200 pt-4 text-sm">
                 <div className="flex justify-between text-slate-500">
@@ -476,7 +421,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
-                  <span>Delivery ({payment})</span>
+                  <span>Delivery</span>
                   <span className={isFree ? 'font-semibold text-green-600' : 'font-medium text-slate-700'}>
                     {isFree ? 'Free Delivery' : inr(deliveryCharge)}
                   </span>
@@ -488,15 +433,15 @@ export default function CheckoutPage() {
 
               <button onClick={placeOrder} disabled={placing} className="btn-primary mt-4 w-full py-3">
                 {placing ? (
-                  'Placing order…'
+                  'Opening Razorpay…'
                 ) : (
                   <>
-                    <Lock className="h-4 w-4" /> Place Order · {inr(payableTotal)}
+                    <Lock className="h-4 w-4" /> Pay with Razorpay · {inr(payableTotal)}
                   </>
                 )}
               </button>
               <p className="mt-2 text-center text-xs text-slate-400">
-                Prices and delivery fees are verified on the server.
+                100% secure payment powered by Razorpay.
               </p>
             </div>
           </div>

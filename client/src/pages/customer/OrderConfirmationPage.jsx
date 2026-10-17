@@ -144,19 +144,17 @@ export default function OrderConfirmationPage() {
             <p className="mt-1 text-xs text-amber-700">
               Your order is saved. Complete payment now or we&apos;ll contact you shortly.
             </p>
-            {user && (
-              <button
-                onClick={retryPayment}
-                disabled={retrying}
-                className="btn-primary mt-3 w-full py-2 text-sm"
-              >
-                {retrying ? (
-                  <><RefreshCw className="h-4 w-4 animate-spin" /> Opening payment…</>
-                ) : (
-                  <><CreditCard className="h-4 w-4" /> Pay {inr(order.total)} Now</>
-                )}
-              </button>
-            )}
+            <button
+              onClick={retryPayment}
+              disabled={retrying}
+              className="btn-primary mt-3 w-full py-2.5 text-sm"
+            >
+              {retrying ? (
+                <><RefreshCw className="h-4 w-4 animate-spin" /> Opening payment…</>
+              ) : (
+                <><CreditCard className="h-4 w-4" /> Pay {inr(order.total)} Now (Razorpay)</>
+              )}
+            </button>
           </div>
         )}
 

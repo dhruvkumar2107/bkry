@@ -81,7 +81,7 @@ router.post(
       address: addressSchema.optional(),
       addressId: z.string().optional(),
       couponCode: z.string().optional(),
-      paymentMethod: z.enum(['COD', 'ONLINE']).default('COD'),
+      paymentMethod: z.enum(['COD', 'ONLINE']).default('ONLINE'),
       deliveryInstructions: z.string().optional(),
     })
   ),
