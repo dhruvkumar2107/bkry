@@ -96,7 +96,7 @@ router.post(
     const guestToken = req.headers['x-guest-token'] || req.cookies?.guestToken || null;
     const cart = req.user
       ? await prisma.cart.findFirst({ where: { userId: req.user.id } })
-      : await prisma.cart.findUnique({ where: { guestToken } });
+      : (guestToken ? await prisma.cart.findUnique({ where: { guestToken } }) : null);
     if (!cart) throw new ApiError(400, 'Your cart is empty');
 
     const cartItems = await prisma.cartItem.findMany({

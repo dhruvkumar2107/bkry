@@ -36,8 +36,14 @@ export default function ProductBrowser({ title, subtitle, baseParams = {}, showT
     }
   };
 
-  // Reload whenever the base query (category/search) or filters change.
-  useEffect(() => { load(1); /* eslint-disable-next-line */ }, [JSON.stringify(baseParams), filters.sort, filters.inStock, filters.minPrice, filters.maxPrice]);
+  // Reload whenever the base query (category/search) or filters change, or when window regains focus.
+  useEffect(() => {
+    load(1);
+    const onFocus = () => load(pagination.page || 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+    /* eslint-disable-next-line */
+  }, [JSON.stringify(baseParams), filters.sort, filters.inStock, filters.minPrice, filters.maxPrice]);
 
   const clearFilters = () => setFilters({ sort: 'popular', minPrice: '', maxPrice: '', inStock: false });
   const activeFilters = filters.minPrice || filters.maxPrice || filters.inStock;

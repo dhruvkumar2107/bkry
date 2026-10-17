@@ -21,6 +21,9 @@ export default function TrackOrderPage() {
     try {
       const { data } = await api.get(`/track/${orderNumber}`, { params: token ? { t: token } : {} });
       setOrder(data.order);
+      if (data.order && token) {
+        localStorage.setItem(`track_${orderNumber}`, token);
+      }
     } catch {
       setOrder(null);
     } finally {
@@ -28,11 +31,21 @@ export default function TrackOrderPage() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [orderNumber]);
+  useEffect(() => {
+    if (params.get('t')) {
+      localStorage.setItem(`track_${orderNumber}`, params.get('t'));
+    }
+    load();
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+    /* eslint-disable-next-line */
+  }, [orderNumber]);
 
   useEffect(() => {
     if (!order) return undefined;
-    const poll = setInterval(load, 15000);
+    // Fast polling fallback (4s) so status updates and GPS movements are smooth and real-time
+    const poll = setInterval(load, 4000);
     const socket = getSocket();
     socket.emit('order:subscribe', order.id);
     const onStatus = (p) => { if (p.orderId === order.id) load(); };
@@ -43,7 +56,7 @@ export default function TrackOrderPage() {
     socket.on('order:status', onStatus);
     socket.on('delivery:location', onLocation);
     return () => { clearInterval(poll); socket.emit('order:unsubscribe', order.id); socket.off('order:status', onStatus); socket.off('delivery:location', onLocation); };
-  }, [order?.id]); // eslint-disable-line
+  }, [order?.id]);
 
   const markers = useMemo(() => {
     const m = [];

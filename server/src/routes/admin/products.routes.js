@@ -167,6 +167,45 @@ router.put(
     if (!existing) throw new ApiError(404, 'Product not found');
 
     const product = await prisma.$transaction(async (tx) => {
+      // Determine variants and price synchronization
+      let variantsList = b.variants ? [...b.variants] : null;
+      let effectiveBasePrice = b.basePrice;
+
+      if (variantsList && variantsList.length > 0) {
+        if (b.basePrice !== undefined && Number(b.basePrice) >= 0) {
+          let baseIdx = 0;
+          let minVal = Infinity;
+          for (let i = 0; i < variantsList.length; i++) {
+            if (Number(variantsList[i].price) < minVal) {
+              minVal = Number(variantsList[i].price);
+              baseIdx = i;
+            }
+          }
+          variantsList[baseIdx].price = Number(b.basePrice);
+          if (b.originalPrice !== undefined) {
+            variantsList[baseIdx].originalPrice = b.originalPrice != null ? Number(b.originalPrice) : null;
+          }
+        }
+        const activePrices = variantsList.filter((v) => v.isActive !== false && Number(v.price) >= 0).map((v) => Number(v.price));
+        if (activePrices.length > 0) {
+          effectiveBasePrice = Math.min(...activePrices);
+        }
+      } else if (b.basePrice !== undefined && existing.variants.length > 0) {
+        let baseVar = existing.variants[0];
+        for (const v of existing.variants) {
+          if (v.price < baseVar.price) baseVar = v;
+        }
+        await tx.productVariant.update({
+          where: { id: baseVar.id },
+          data: {
+            price: Number(b.basePrice),
+            ...(b.originalPrice !== undefined ? { originalPrice: b.originalPrice != null ? Number(b.originalPrice) : null } : {}),
+          },
+        });
+        const otherPrices = existing.variants.filter((v) => v.id !== baseVar.id && v.isActive).map((v) => v.price);
+        effectiveBasePrice = Math.min(Number(b.basePrice), ...(otherPrices.length ? otherPrices : [Number(b.basePrice)]));
+      }
+
       await tx.product.update({
         where: { id: existing.id },
         data: {
@@ -174,7 +213,7 @@ router.put(
           ...(b.slug !== undefined ? { slug: slugify(b.slug) } : {}),
           ...(b.description !== undefined ? { description: b.description } : {}),
           ...(b.sku !== undefined ? { sku: b.sku } : {}),
-          ...(b.basePrice !== undefined ? { basePrice: b.basePrice } : {}),
+          ...(effectiveBasePrice !== undefined ? { basePrice: effectiveBasePrice } : {}),
           ...(b.originalPrice !== undefined ? { originalPrice: b.originalPrice } : {}),
           ...(b.unit !== undefined ? { unit: b.unit } : {}),
           ...(b.ingredients !== undefined ? { ingredients: b.ingredients } : {}),
@@ -200,21 +239,21 @@ router.put(
           data: b.images.map((img, i) => ({ productId: existing.id, url: img.url, alt: img.alt ?? null, sortOrder: img.sortOrder ?? i })),
         });
       }
-      if (b.variants) {
-        const incomingIds = b.variants.filter((v) => v.id).map((v) => v.id);
+      if (variantsList) {
+        const incomingIds = variantsList.filter((v) => v.id).map((v) => v.id);
         await tx.productVariant.deleteMany({
           where: { productId: existing.id, id: { notIn: incomingIds.length ? incomingIds : ['__none__'] } },
         });
-        for (const [i, v] of b.variants.entries()) {
+        for (const [i, v] of variantsList.entries()) {
           if (v.id) {
             await tx.productVariant.update({
               where: { id: v.id },
               data: {
                 label: v.label,
                 weightGrams: v.weightGrams ?? null,
-                price: v.price,
-                originalPrice: v.originalPrice ?? null,
-                stock: v.stock,
+                price: Number(v.price),
+                originalPrice: v.originalPrice != null ? Number(v.originalPrice) : null,
+                stock: Number(v.stock),
                 sku: v.sku || null,
                 isActive: v.isActive,
                 sortOrder: v.sortOrder ?? i,
@@ -226,9 +265,9 @@ router.put(
                 productId: existing.id,
                 label: v.label,
                 weightGrams: v.weightGrams ?? null,
-                price: v.price,
-                originalPrice: v.originalPrice ?? null,
-                stock: v.stock,
+                price: Number(v.price),
+                originalPrice: v.originalPrice != null ? Number(v.originalPrice) : null,
+                stock: Number(v.stock),
                 sku: v.sku || null,
                 isActive: v.isActive,
                 sortOrder: v.sortOrder ?? i,
@@ -326,6 +365,18 @@ router.post(
       return prisma.productVariant.update({ where: { id: v.id }, data });
     });
     await prisma.$transaction(ops);
+
+    if (price && price.mode !== 'NONE') {
+      const productIds = [...new Set(variants.map((v) => v.productId))];
+      for (const pid of productIds) {
+        const prodVariants = await prisma.productVariant.findMany({ where: { productId: pid, isActive: true } });
+        if (prodVariants.length) {
+          const minP = Math.min(...prodVariants.map((pv) => pv.price));
+          await prisma.product.update({ where: { id: pid }, data: { basePrice: minP } });
+        }
+      }
+    }
+
     await logAudit({ userId: req.user.id, action: 'PRODUCT_BULK_UPDATE', meta: { count: variants.length } });
     res.json({ success: true, updated: variants.length });
   })

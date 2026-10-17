@@ -31,7 +31,7 @@ const openRazorpayModal = (rz, orderNumber, prefill = {}) =>
       currency: 'INR',
       name: 'Chotulal Sweets',
       description: `Order ${orderNumber}`,
-      image: `${window.location.origin}/logo.svg`,
+      image: `${window.location.origin}/logo.png`,
       order_id: rz.razorpayOrderId,
       handler: async (response) => {
         try {
@@ -175,6 +175,9 @@ export default function CheckoutPage() {
       };
       const { data } = await api.post('/orders/checkout', payload);
       const order = data.order;
+      if (order.trackingToken) {
+        localStorage.setItem(`track_${order.orderNumber}`, order.trackingToken);
+      }
 
       if (payment === 'ONLINE' && settings?.onlinePaymentEnabled) {
         try {
@@ -189,6 +192,8 @@ export default function CheckoutPage() {
           });
           if (!paid) {
             toast.info('Payment was not completed. You can retry from your order page.');
+          } else {
+            toast.success('Payment successful! Order confirmed.');
           }
         } catch (e) {
           toast.error(

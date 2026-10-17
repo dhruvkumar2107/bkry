@@ -76,6 +76,7 @@ export default function OrderConfirmationPage() {
           currency: 'INR',
           name: 'Chotulal Sweets',
           description: `Order ${order.orderNumber}`,
+          image: `${window.location.origin}/logo.png`,
           order_id: rz.razorpayOrderId,
           handler: async (response) => {
             try {
@@ -86,6 +87,10 @@ export default function OrderConfirmationPage() {
               toast.error(`Verification failed: ${apiError(e)}`);
             }
             resolve();
+          },
+          prefill: {
+            name: order.customerName || user?.name || '',
+            contact: order.customerPhone || user?.phone || '',
           },
           theme: { color: '#b45309' },
           modal: { ondismiss: resolve },

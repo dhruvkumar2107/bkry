@@ -8,6 +8,7 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { notify } from '../services/notifications.js';
 import { logAudit } from '../services/audit.js';
+import { updateOrderStatus } from '../services/orderService.js';
 
 const router = Router();
 
@@ -144,6 +145,23 @@ router.post(
 
     const order = await prisma.order.findUnique({ where: { id: payment.orderId } });
 
+    // Transition order from PENDING_CONFIRMATION to CONFIRMED
+    if (order && order.status === 'PENDING_CONFIRMATION') {
+      try {
+        await updateOrderStatus({
+          orderId: order.id,
+          to: 'CONFIRMED',
+          userId: req.user?.id || order.userId || null,
+          note: `Paid online via Razorpay (${razorpay_payment_id})`,
+        });
+      } catch {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: 'CONFIRMED', confirmedAt: new Date() },
+        });
+      }
+    }
+
     await logAudit({
       userId: req.user?.id || order?.userId || null,
       action: 'PAYMENT_VERIFIED',
@@ -214,6 +232,21 @@ router.post(
             data: { paymentStatus: 'PAID' },
           }),
         ]);
+        const order = await prisma.order.findUnique({ where: { id: payment.orderId } });
+        if (order && order.status === 'PENDING_CONFIRMATION') {
+          try {
+            await updateOrderStatus({
+              orderId: order.id,
+              to: 'CONFIRMED',
+              note: `Payment captured via Razorpay webhook (${entity.id})`,
+            });
+          } catch {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { status: 'CONFIRMED', confirmedAt: new Date() },
+            });
+          }
+        }
       }
     }
 

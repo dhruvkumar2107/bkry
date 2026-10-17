@@ -56,10 +56,20 @@ export default function AdminProducts() {
 
   const save = async () => {
     if (!form.name) return toast.error('Product name is required');
+    let payload = { ...form };
+    if (!payload.variants || !payload.variants.length) {
+      payload.variants = [{ ...emptyVariant(), price: Number(payload.basePrice) || 0, stock: 20 }];
+    }
+    const activePrices = payload.variants
+      .filter((v) => v.isActive !== false && Number(v.price) >= 0)
+      .map((v) => Number(v.price));
+    if (activePrices.length) {
+      payload.basePrice = Math.min(...activePrices);
+    }
     setSaving(true);
     try {
-      if (editing === 'new') await api.post('/admin/products', form);
-      else await api.put(`/admin/products/${editing}`, form);
+      if (editing === 'new') await api.post('/admin/products', payload);
+      else await api.put(`/admin/products/${editing}`, payload);
       toast.success('Product saved');
       setEditing(null);
       load(pagination.page);
@@ -100,7 +110,46 @@ export default function AdminProducts() {
   };
 
   const toggleSelect = (vid) => setSelected((s) => (s.includes(vid) ? s.filter((x) => x !== vid) : [...s, vid]));
-  const setVariant = (i, patch) => setForm((f) => ({ ...f, variants: f.variants.map((v, idx) => (idx === i ? { ...v, ...patch } : v)) }));
+
+  const onBasePriceChange = (val) => {
+    const newBase = Math.max(0, Number(val));
+    setForm((f) => {
+      const oldBase = Number(f.basePrice) || 0;
+      const variants = (f.variants || []).map((v, idx) => {
+        if (f.variants.length === 1 || idx === 0 || v.price === oldBase || v.price === 0) {
+          return { ...v, price: newBase };
+        }
+        return v;
+      });
+      return { ...f, basePrice: newBase, variants };
+    });
+  };
+
+  const onOriginalPriceChange = (val) => {
+    const newOrig = val ? Math.max(0, Number(val)) : null;
+    setForm((f) => {
+      const oldOrig = f.originalPrice ? Number(f.originalPrice) : null;
+      const variants = (f.variants || []).map((v, idx) => {
+        if (f.variants.length === 1 || idx === 0 || v.originalPrice === oldOrig) {
+          return { ...v, originalPrice: newOrig };
+        }
+        return v;
+      });
+      return { ...f, originalPrice: newOrig, variants };
+    });
+  };
+
+  const setVariant = (i, patch) => {
+    setForm((f) => {
+      const variants = f.variants.map((v, idx) => (idx === i ? { ...v, ...patch } : v));
+      const activePrices = variants
+        .filter((v) => v.isActive !== false && Number(v.price) > 0)
+        .map((v) => Number(v.price));
+      const minPrice = activePrices.length ? Math.min(...activePrices) : f.basePrice;
+      return { ...f, basePrice: minPrice, variants };
+    });
+  };
+
   const addVariant = () => setForm((f) => ({ ...f, variants: [...f.variants, { ...emptyVariant(), sortOrder: f.variants.length }] }));
   const addPresetVariant = (label, weightGrams, multiplier = 1) => {
     const baseP = Number(form.basePrice) || 100;
@@ -215,8 +264,8 @@ export default function AdminProducts() {
           </div>
           <Field label="Description"><textarea className="input" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Base price (₹)"><input type="number" className="input" value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: Number(e.target.value) })} /></Field>
-            <Field label="Original price (₹)"><input type="number" className="input" value={form.originalPrice ?? ''} onChange={(e) => setForm({ ...form, originalPrice: e.target.value ? Number(e.target.value) : null })} /></Field>
+            <Field label="Selling / Base price (₹)"><input type="number" className="input" value={form.basePrice} onChange={(e) => onBasePriceChange(e.target.value)} /></Field>
+            <Field label="Original / MRP price (₹)"><input type="number" className="input" value={form.originalPrice ?? ''} onChange={(e) => onOriginalPriceChange(e.target.value)} /></Field>
             <Field label="Unit"><input className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Field>
           </div>
 

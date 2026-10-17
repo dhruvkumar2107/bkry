@@ -17,18 +17,23 @@ export default function ProductPage() {
   const [activeImg, setActiveImg] = useState(0);
   const add = useCart((s) => s.add);
 
-  useEffect(() => {
-    setLoading(true);
+  const loadProduct = () => {
     api.get(`/catalog/products/${slug}`)
       .then(({ data }) => {
         setData(data);
         const inStock = data.product.variants.find((v) => v.stock > 0);
-        setVariantId((inStock || data.product.variants[0])?.id || null);
-        setActiveImg(0);
-        setQty(1);
+        setVariantId((prev) => prev && data.product.variants.some((v) => v.id === prev) ? prev : (inStock || data.product.variants[0])?.id || null);
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    loadProduct();
+    const onFocus = () => loadProduct();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [slug]);
 
   if (loading) return <PageLoader />;

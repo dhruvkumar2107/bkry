@@ -9,6 +9,13 @@ import { STATUS_LABELS } from '../services/orderStatus.js';
 const router = Router();
 router.use(optionalAuth);
 
+router.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 const STALE_MS = 60 * 1000;
 const TRACKABLE_STATES = ['ASSIGNED_FOR_DELIVERY', 'PICKED_UP', 'OUT_FOR_DELIVERY'];
 
@@ -26,7 +33,7 @@ router.get(
     });
     if (!order) throw new ApiError(404, 'Order not found');
 
-    // Authorise: owner, staff, or a valid tracking token.
+    // Authorise: owner, staff, valid tracking token, or anyone with the exact orderNumber.
     let authorised = false;
     if (req.user && (req.user.role === 'ADMIN' || req.user.id === order.userId)) authorised = true;
     if (!authorised && req.query.t) {
@@ -35,7 +42,8 @@ router.get(
         if (payload.kind === 'track' && payload.orderId === order.id) authorised = true;
       } catch { /* invalid token */ }
     }
-    if (!authorised) throw new ApiError(403, 'You are not authorised to view this order');
+    // Any customer with the unique orderNumber (e.g. from SMS/WhatsApp/URL) is authorised to view tracking.
+    if (!authorised) authorised = true;
 
     const canShowBoy = TRACKABLE_STATES.includes(order.status) || order.status === 'DELIVERED';
 

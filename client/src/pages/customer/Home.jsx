@@ -35,11 +35,18 @@ export default function Home() {
   const [locOpen, setLocOpen] = useState(false);
   const { location } = useLocation();
 
-  useEffect(() => {
+  const loadHome = () => {
     api.get('/catalog/home')
       .then(({ data }) => setData(data))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadHome();
+    const onFocus = () => loadHome();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   if (loading) return <div className="container-app py-5"><HomeSkeleton /></div>;

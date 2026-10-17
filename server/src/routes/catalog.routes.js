@@ -5,6 +5,15 @@ import { getSettings } from '../services/settings.js';
 
 const router = Router();
 
+// Ensure catalog endpoints are never cached by the browser or intermediary proxies
+// so admin updates (pricing, products, stock, banners) reflect immediately.
+router.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 export const shapeProduct = (p) => {
   const variants = (p.variants || []).filter((v) => v.isActive);
   const prices = variants.map((v) => v.price);

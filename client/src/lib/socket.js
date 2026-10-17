@@ -1,11 +1,9 @@
 import { io } from 'socket.io-client';
 import { API_BASE } from './api.js';
 
-// Realtime sockets require a long-lived server (Socket.IO). On serverless hosts
-// such as Vercel they are unavailable, so they are opt-in via
-// VITE_ENABLE_SOCKETS=true. When disabled a no-op stub is returned and the UI
-// falls back to periodic polling of the REST API.
-const ENABLED = import.meta.env.VITE_ENABLE_SOCKETS === 'true';
+// Realtime sockets connect to the server (Socket.IO) for live order tracking,
+// live delivery GPS, and status updates. Enabled by default.
+const ENABLED = import.meta.env.VITE_ENABLE_SOCKETS !== 'false';
 
 let socket = null;
 
