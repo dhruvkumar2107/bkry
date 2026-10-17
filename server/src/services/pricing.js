@@ -1,8 +1,28 @@
 import { round2 } from '../utils/helpers.js';
 
+// COD delivery fee rules:
+// - subtotal >= COD_FREE_THRESHOLD → free delivery
+// - subtotal < COD_FREE_THRESHOLD → flat ₹40 fee
+export const COD_FREE_THRESHOLD = 999;
+export const COD_DELIVERY_FEE = 40;
+
+// Calculates delivery fee based on payment method and subtotal.
+// For COD: free at/above ₹999, ₹40 below.
+// For ONLINE: uses settings.deliveryFee, free if subtotal >= settings.freeDeliveryAbove.
+export const calcDeliveryFee = ({ subtotal, paymentMethod, settings }) => {
+  if (paymentMethod === 'COD') {
+    return subtotal >= COD_FREE_THRESHOLD ? 0 : COD_DELIVERY_FEE;
+  }
+  // ONLINE payment
+  let fee = settings.deliveryFee ?? 0;
+  if (settings.freeDeliveryAbove && subtotal >= settings.freeDeliveryAbove) fee = 0;
+  return fee;
+};
+
 // Recomputes an order's totals from authoritative variant prices. The browser
 // never dictates prices, discounts, or totals - only variant ids and quantities.
-export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride }) => {
+// Tax is NOT added to customer-facing totals per business requirement.
+export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride, paymentMethod }) => {
   let subtotal = 0;
   const lines = [];
   for (const item of items) {
@@ -32,11 +52,22 @@ export const computeTotals = ({ items, coupon, settings, deliveryFeeOverride }) 
 
   const afterDiscount = round2(subtotal - discount);
 
-  let deliveryFee = deliveryFeeOverride ?? settings.deliveryFee ?? 0;
-  if (settings.freeDeliveryAbove && subtotal >= settings.freeDeliveryAbove) deliveryFee = 0;
+  // Delivery fee: use override if provided, else use payment-method-aware calc.
+  let deliveryFee;
+  if (deliveryFeeOverride !== undefined && deliveryFeeOverride !== null) {
+    deliveryFee = deliveryFeeOverride;
+  } else if (paymentMethod) {
+    deliveryFee = calcDeliveryFee({ subtotal, paymentMethod, settings });
+  } else {
+    // Fallback: use settings-based fee (for cart display without known payment method)
+    deliveryFee = settings.deliveryFee ?? 0;
+    if (settings.freeDeliveryAbove && subtotal >= settings.freeDeliveryAbove) deliveryFee = 0;
+  }
 
-  const taxPercent = settings.taxEnabled ? settings.taxPercent || 0 : 0;
-  const taxAmount = round2((afterDiscount * taxPercent) / 100);
+  // Tax is NOT applied to customer-facing totals.
+  // taxPercent/taxAmount are preserved for admin/accounting only.
+  const taxPercent = 0;
+  const taxAmount = 0;
 
   const total = round2(afterDiscount + deliveryFee + taxAmount);
 

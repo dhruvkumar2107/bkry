@@ -78,11 +78,35 @@ export default function CartPage() {
           </div>
           <p className="mt-1 text-xs text-slate-400">Try SWEET10, FIRST50 or FESTIVE15</p>
 
+          {(() => {
+            const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
+            const threshold = cart.codFreeDeliveryAbove || 999;
+            if (afterDiscount < threshold) {
+              const diff = threshold - afterDiscount;
+              return (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                  <p className="font-medium">Add {inr(diff)} more to get Free Delivery!</p>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-amber-200">
+                    <div
+                      className="h-full bg-amber-600 transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.round((afterDiscount / threshold) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-800 flex items-center justify-between">
+                <span>🎉 Free Delivery unlocked!</span>
+                <span className="text-[11px] text-green-600">On orders ₹{threshold}+</span>
+              </div>
+            );
+          })()}
+
           <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-200 pt-4 text-sm">
             <Row label="Subtotal" value={inr(cart.subtotal)} />
             {cart.discount > 0 && <Row label="Discount" value={`− ${inr(cart.discount)}`} green />}
-            <Row label="Delivery" value={cart.deliveryFee === 0 ? 'FREE' : inr(cart.deliveryFee)} />
-            {cart.taxAmount > 0 && <Row label="Tax" value={inr(cart.taxAmount)} />}
+            <Row label="Delivery" value={cart.deliveryFee === 0 ? 'Free Delivery' : inr(cart.deliveryFee)} green={cart.deliveryFee === 0} />
             <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-bold">
               <span>Total</span><span>{inr(cart.total)}</span>
             </div>

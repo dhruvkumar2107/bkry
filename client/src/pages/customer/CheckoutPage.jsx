@@ -348,21 +348,26 @@ export default function CheckoutPage() {
           <div className="mt-3 space-y-2">
             {settings?.codEnabled && (
               <label
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
                   payment === 'COD' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'
                 }`}
               >
                 <input type="radio" name="pay" checked={payment === 'COD'} onChange={() => setPayment('COD')} />
                 <Wallet className="h-5 w-5 text-brand-600" />
-                <div className="text-sm">
-                  <p className="font-semibold">Cash on Delivery</p>
-                  <p className="text-xs text-slate-400">Pay when your order arrives</p>
+                <div className="text-sm flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">Cash on Delivery</p>
+                    <span className="text-xs font-medium text-brand-700">
+                      {Math.max(0, (cart.subtotal || 0) - (cart.discount || 0)) >= 999 ? 'Free Delivery' : '₹40 Delivery'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Pay cash upon delivery at your doorstep</p>
                 </div>
               </label>
             )}
             {settings?.onlinePaymentEnabled ? (
               <label
-                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
                   payment === 'ONLINE' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'
                 }`}
               >
@@ -373,9 +378,18 @@ export default function CheckoutPage() {
                   onChange={() => setPayment('ONLINE')}
                 />
                 <CreditCard className="h-5 w-5 text-brand-600" />
-                <div className="text-sm">
-                  <p className="font-semibold">Online Payment (Razorpay)</p>
-                  <p className="text-xs text-slate-400">UPI · Cards · Net Banking · Wallets</p>
+                <div className="text-sm flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">Online Payment (Razorpay)</p>
+                    <span className="text-xs font-medium text-brand-700">
+                      {(() => {
+                        const sub = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
+                        const freeOnline = settings?.freeDeliveryAbove && sub >= settings.freeDeliveryAbove;
+                        return freeOnline ? 'Free Delivery' : (settings?.deliveryFee ? inr(settings.deliveryFee) : 'Free Delivery');
+                      })()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">UPI, Credit/Debit Cards, Net Banking & Wallets</p>
                 </div>
               </label>
             ) : (
@@ -388,55 +402,106 @@ export default function CheckoutPage() {
       </div>
 
       {/* Order summary sidebar */}
-      <div className="lg:sticky lg:top-24 lg:h-fit">
-        <div className="card p-5">
-          <h3 className="font-semibold">Order summary</h3>
-          <ul className="mt-3 space-y-2 text-sm">
-            {cart.items.map((it) => (
-              <li key={it.id} className="flex justify-between gap-2">
-                <span className="text-slate-600">
-                  {it.name} <span className="text-slate-400">× {it.quantity}</span>
-                </span>
-                <span className="font-medium">{inr(it.lineTotal)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-200 pt-4 text-sm">
-            <div className="flex justify-between text-slate-500">
-              <span>Subtotal</span><span>{inr(cart.subtotal)}</span>
-            </div>
-            {cart.discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Discount</span><span>− {inr(cart.discount)}</span>
+      {(() => {
+        const afterDiscount = Math.max(0, (cart.subtotal || 0) - (cart.discount || 0));
+        let deliveryCharge = 0;
+        let isFree = false;
+        let diffToFree = 0;
+
+        if (payment === 'COD') {
+          const threshold = 999;
+          if (afterDiscount >= threshold) {
+            deliveryCharge = 0;
+            isFree = true;
+          } else {
+            deliveryCharge = 40;
+            diffToFree = threshold - afterDiscount;
+          }
+        } else {
+          // ONLINE
+          const threshold = settings?.freeDeliveryAbove || 0;
+          if (threshold && afterDiscount >= threshold) {
+            deliveryCharge = 0;
+            isFree = true;
+          } else {
+            deliveryCharge = settings?.deliveryFee ?? 0;
+            if (deliveryCharge === 0) isFree = true;
+            else if (threshold) diffToFree = threshold - afterDiscount;
+          }
+        }
+
+        const payableTotal = Math.round((afterDiscount + deliveryCharge) * 100) / 100;
+
+        return (
+          <div className="lg:sticky lg:top-24 lg:h-fit">
+            <div className="card p-5">
+              <h3 className="font-semibold">Order summary</h3>
+              <ul className="mt-3 space-y-2 text-sm">
+                {cart.items.map((it) => (
+                  <li key={it.id} className="flex justify-between gap-2">
+                    <span className="text-slate-600">
+                      {it.name} <span className="text-slate-400">× {it.quantity}</span>
+                    </span>
+                    <span className="font-medium">{inr(it.lineTotal)}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {diffToFree > 0 ? (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                  <p className="font-medium">
+                    Add {inr(diffToFree)} more to get Free Delivery!
+                  </p>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-amber-200">
+                    <div
+                      className="h-full bg-amber-600 transition-all duration-300"
+                      style={{ width: `${Math.min(100, Math.round((afterDiscount / (afterDiscount + diffToFree)) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              ) : isFree ? (
+                <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-800 flex items-center justify-between">
+                  <span>🎉 Free Delivery</span>
+                  <span className="text-[11px] text-green-600">{payment === 'COD' ? 'COD on ₹999+' : 'Free Delivery'}</span>
+                </div>
+              ) : null}
+
+              <div className="mt-4 space-y-1.5 border-t border-dashed border-slate-200 pt-4 text-sm">
+                <div className="flex justify-between text-slate-500">
+                  <span>Subtotal</span><span>{inr(cart.subtotal)}</span>
+                </div>
+                {cart.discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span><span>− {inr(cart.discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-500">
+                  <span>Delivery ({payment})</span>
+                  <span className={isFree ? 'font-semibold text-green-600' : 'font-medium text-slate-700'}>
+                    {isFree ? 'Free Delivery' : inr(deliveryCharge)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-bold">
+                  <span>Total</span><span>{inr(payableTotal)}</span>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between text-slate-500">
-              <span>Delivery</span>
-              <span>{cart.deliveryFee === 0 ? 'FREE' : inr(cart.deliveryFee)}</span>
-            </div>
-            {cart.taxAmount > 0 && (
-              <div className="flex justify-between text-slate-500">
-                <span>Tax</span><span>{inr(cart.taxAmount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-bold">
-              <span>Total</span><span>{inr(cart.total)}</span>
+
+              <button onClick={placeOrder} disabled={placing} className="btn-primary mt-4 w-full py-3">
+                {placing ? (
+                  'Placing order…'
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" /> Place Order · {inr(payableTotal)}
+                  </>
+                )}
+              </button>
+              <p className="mt-2 text-center text-xs text-slate-400">
+                Prices and delivery fees are verified on the server.
+              </p>
             </div>
           </div>
-          <button onClick={placeOrder} disabled={placing} className="btn-primary mt-4 w-full py-3">
-            {placing ? (
-              'Placing order…'
-            ) : (
-              <>
-                <Lock className="h-4 w-4" /> Place Order · {inr(cart.total)}
-              </>
-            )}
-          </button>
-          <p className="mt-2 text-center text-xs text-slate-400">
-            Prices are verified on the server before your order is created.
-          </p>
-        </div>
-      </div>
+        );
+      })()}
     </div>
   );
 }

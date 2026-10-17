@@ -4,7 +4,7 @@ import prisma from '../lib/prisma.js';
 import { ApiError, asyncHandler } from '../utils/http.js';
 import { validate } from '../middleware/validate.js';
 import { optionalAuth } from '../middleware/auth.js';
-import { computeTotals, validateCoupon } from '../services/pricing.js';
+import { computeTotals, validateCoupon, COD_FREE_THRESHOLD, COD_DELIVERY_FEE } from '../services/pricing.js';
 import { getSettings } from '../services/settings.js';
 import { genToken } from '../utils/helpers.js';
 
@@ -29,7 +29,7 @@ const getOrCreateCart = async (req, res) => {
   return cart;
 };
 
-const serializeCart = async (cart, couponCode) => {
+const serializeCart = async (cart, couponCode, paymentMethod = 'COD') => {
   const items = await prisma.cartItem.findMany({
     where: { cartId: cart.id },
     include: {
@@ -56,7 +56,7 @@ const serializeCart = async (cart, couponCode) => {
     if (check.ok) coupon = found;
   }
 
-  const totals = computeTotals({ items: priced, coupon, settings });
+  const totals = computeTotals({ items: priced, coupon, settings, paymentMethod: paymentMethod || 'COD' });
 
   return {
     id: cart.id,
@@ -75,8 +75,11 @@ const serializeCart = async (cart, couponCode) => {
     })),
     coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     ...totals,
+    paymentMethod: paymentMethod || 'COD',
     minOrderAmount: settings.minOrderAmount,
     freeDeliveryAbove: settings.freeDeliveryAbove,
+    codFreeDeliveryAbove: COD_FREE_THRESHOLD,
+    codDeliveryFee: COD_DELIVERY_FEE,
   };
 };
 
@@ -84,7 +87,7 @@ router.get(
   '/',
   asyncHandler(async (req, res) => {
     const cart = await getOrCreateCart(req, res);
-    const data = await serializeCart(cart, req.query.coupon);
+    const data = await serializeCart(cart, req.query.coupon, req.query.paymentMethod);
     res.json({ success: true, cart: data });
   })
 );
@@ -111,7 +114,7 @@ router.post(
     } else {
       await prisma.cartItem.create({ data: { cartId: cart.id, productId: variant.productId, variantId, quantity } });
     }
-    const data = await serializeCart(cart, req.query.coupon);
+    const data = await serializeCart(cart, req.query.coupon, req.query.paymentMethod);
     res.status(201).json({ success: true, cart: data });
   })
 );
@@ -128,7 +131,7 @@ router.patch(
       throw new ApiError(409, `Only ${variant.stock} unit(s) available`);
     }
     await prisma.cartItem.update({ where: { id: item.id }, data: { quantity: req.body.quantity } });
-    const data = await serializeCart(cart, req.query.coupon);
+    const data = await serializeCart(cart, req.query.coupon, req.query.paymentMethod);
     res.json({ success: true, cart: data });
   })
 );
@@ -140,7 +143,7 @@ router.delete(
     const item = await prisma.cartItem.findFirst({ where: { id: req.params.id, cartId: cart.id } });
     if (!item) throw new ApiError(404, 'Cart item not found');
     await prisma.cartItem.delete({ where: { id: item.id } });
-    const data = await serializeCart(cart, req.query.coupon);
+    const data = await serializeCart(cart, req.query.coupon, req.query.paymentMethod);
     res.json({ success: true, cart: data });
   })
 );
@@ -150,7 +153,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     const cart = await getOrCreateCart(req, res);
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-    const data = await serializeCart(cart);
+    const data = await serializeCart(cart, undefined, req.query.paymentMethod);
     res.json({ success: true, cart: data });
   })
 );

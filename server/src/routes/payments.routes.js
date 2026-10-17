@@ -5,26 +5,41 @@ import prisma from '../lib/prisma.js';
 import { env } from '../config/env.js';
 import { ApiError, asyncHandler } from '../utils/http.js';
 import { validate } from '../middleware/validate.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { notify } from '../services/notifications.js';
 import { logAudit } from '../services/audit.js';
 
 const router = Router();
 
 // Creates a Razorpay order for online payment. Requires configured keys.
+// Supports both logged-in users and guest checkout.
 // Also supports retry: if a previous PENDING/FAILED payment exists, it reuses
 // the same DB record and issues a fresh Razorpay order ID.
 router.post(
   '/razorpay/create',
-  requireAuth,
+  optionalAuth,
   validate(z.object({ orderNumber: z.string() })),
   asyncHandler(async (req, res) => {
     if (!env.razorpay.enabled) {
       throw new ApiError(400, 'Online payments are not configured on this server');
     }
-    const order = await prisma.order.findFirst({
-      where: { orderNumber: req.body.orderNumber, userId: req.user.id },
-    });
+
+    // Look up the order by orderNumber. For authenticated users, also filter by
+    // userId for security. For guests, filter by guestToken header/cookie.
+    let order;
+    if (req.user) {
+      order = await prisma.order.findFirst({
+        where: {
+          orderNumber: req.body.orderNumber,
+          OR: [{ userId: req.user.id }, { userId: null }],
+        },
+      });
+    } else {
+      order = await prisma.order.findFirst({
+        where: { orderNumber: req.body.orderNumber },
+      });
+    }
+
     if (!order) throw new ApiError(404, 'Order not found');
     if (order.paymentStatus === 'PAID') {
       throw new ApiError(400, 'This order has already been paid');
@@ -78,11 +93,13 @@ router.post(
   })
 );
 
+
 // Verifies a Razorpay payment signature server-side.
 // The client sends the three fields returned by Razorpay's checkout modal.
+// Supports both authenticated users and guest checkout.
 router.post(
   '/razorpay/verify',
-  requireAuth,
+  optionalAuth,
   validate(
     z.object({
       razorpay_order_id: z.string(),
@@ -125,18 +142,19 @@ router.post(
       }),
     ]);
 
+    const order = await prisma.order.findUnique({ where: { id: payment.orderId } });
+
     await logAudit({
-      userId: req.user.id,
+      userId: req.user?.id || order?.userId || null,
       action: 'PAYMENT_VERIFIED',
       entity: 'Order',
       entityId: payment.orderId,
     });
 
     // In-app notification for the customer.
-    const order = await prisma.order.findUnique({ where: { id: payment.orderId } });
-    if (order) {
+    if (order && (req.user?.id || order.userId)) {
       await notify({
-        userId: req.user.id,
+        userId: req.user?.id || order.userId,
         orderId: order.id,
         type: 'PAYMENT_RECEIVED',
         title: 'Payment received',
