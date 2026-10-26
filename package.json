@@ -1,0 +1,27 @@
+{
+  "name": "chotulal-sweets",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chotulal Sweets - online sweets & bakery ordering + delivery platform",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -n server,client -c green,cyan \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "setup": "npm --prefix server run setup && npm --prefix client install",
+    "seed": "npm --prefix server run seed",
+    "vercel-build": "npm --prefix client run build && npm --prefix server run vercel:db"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "@neon/config": "^1.8.6",
+    "@neon/env": "^1.5.3"
+  }
+}
