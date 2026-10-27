@@ -349,7 +349,7 @@ export default function WebsiteContent() {
                 className="input"
                 value={settings.socialWhatsapp || ''}
                 onChange={(e) => update('socialWhatsapp', e.target.value)}
-                placeholder="+91 90000 00000"
+                placeholder="+91 97418 57227"
               />
             </Field>
 

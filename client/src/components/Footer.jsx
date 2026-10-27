@@ -110,8 +110,8 @@ export default function Footer({ settings = {} }) {
             </li>
             <li className="flex items-center gap-2">
               <Phone className="h-4 w-4 shrink-0 text-brand-600" />
-              <a href={`tel:${settings?.contactPhone || '+919000000000'}`} className="hover:text-brand-700">
-                {settings?.contactPhone || '+91 90000 00000'}
+              <a href={`tel:${settings?.contactPhone || '+919741857227'}`} className="hover:text-brand-700">
+                {settings?.contactPhone || '+91 97418 57227'}
               </a>
             </li>
             {settings?.contactEmail && (

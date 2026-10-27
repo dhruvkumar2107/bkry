@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronDown, Phone, Mail, MapPin, Clock, ShieldCheck, Truck, RefreshCw, HelpCircle, FileText, XCircle, MessageCircle } from 'lucide-react';
-import api from '../../lib/api.js';
+import api, { apiError } from '../../lib/api.js';
 import { PageLoader } from '../../components/ui.jsx';
 
 function BranchCard({ name, address, phone, email, googleMaps }) {
@@ -42,11 +42,59 @@ function BranchCard({ name, address, phone, email, googleMaps }) {
   );
 }
 
+// Renders the light markdown used in CMS content: "## "/"### " headings,
+// "- " bullet lists, **bold** and blank-line separated paragraphs.
+function renderInline(text) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? <strong key={i} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong> : part
+  );
+}
+
+function RichText({ text }) {
+  const blocks = [];
+  let list = null;
+  (text || '').split('\n').forEach((raw) => {
+    const line = raw.trim();
+    if (line.startsWith('- ')) {
+      if (!list) blocks.push((list = { type: 'ul', items: [] }));
+      list.items.push(line.slice(2));
+      return;
+    }
+    list = null;
+    if (!line) return;
+    const heading = line.match(/^(#{2,3})\s+(.*)$/);
+    if (heading) blocks.push({ type: heading[1].length === 2 ? 'h2' : 'h3', text: heading[2] });
+    else blocks.push({ type: 'p', text: line });
+  });
+  return blocks.map((b, i) => {
+    if (b.type === 'ul') {
+      return (
+        <ul key={i} className="my-3 list-disc space-y-1.5 pl-5">
+          {b.items.map((item, j) => <li key={j}>{renderInline(item)}</li>)}
+        </ul>
+      );
+    }
+    if (b.type === 'h2') return <h2 key={i} className="mt-6 mb-2 text-lg font-bold text-slate-800 first:mt-0">{renderInline(b.text)}</h2>;
+    if (b.type === 'h3') return <h3 key={i} className="mt-5 mb-1.5 text-base font-bold text-slate-800 first:mt-0">{renderInline(b.text)}</h3>;
+    return <p key={i} className="my-3 first:mt-0">{renderInline(b.text)}</p>;
+  });
+}
+
 export default function ContentPage() {
   const { pathname } = useLocation();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState(null);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    orderNumber: '',
+    subject: '',
+    message: '',
+  });
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactError, setContactError] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -97,17 +145,6 @@ export default function ContentPage() {
     { question: 'How can I track my order?', answer: 'Once you place an order, you will receive a tracking link and live updates on your order tracking page.' },
     { question: 'What payment methods are supported?', answer: 'We support online payments (Cards, UPI, Netbanking) via Razorpay as well as Cash on Delivery.' },
   ];
-
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    orderNumber: '',
-    subject: '',
-    message: '',
-  });
-  const [contactSubmitted, setContactSubmitted] = useState(false);
-  const [contactError, setContactError] = useState('');
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
@@ -236,8 +273,8 @@ export default function ContentPage() {
                   <Phone className="h-5 w-5 shrink-0 text-brand-600 mt-0.5" />
                   <div>
                     <p className="font-semibold text-slate-800">Phone</p>
-                    <a href={`tel:${settings?.contactPhone || '+919000000000'}`} className="text-brand-700 hover:underline">
-                      {settings?.contactPhone || '+91 90000 00000'}
+                    <a href={`tel:${settings?.contactPhone || '+919741857227'}`} className="text-brand-700 hover:underline">
+                      {settings?.contactPhone || '+91 97418 57227'}
                     </a>
                   </div>
                 </div>
@@ -387,8 +424,8 @@ export default function ContentPage() {
       ) : (
         /* Standard Policy / About Us Page */
         <div className="card p-6 sm:p-8">
-          <div className="prose prose-slate max-w-none text-slate-700 text-sm sm:text-base leading-relaxed whitespace-pre-line">
-            {content}
+          <div className="max-w-none text-slate-700 text-sm sm:text-base leading-relaxed">
+            <RichText text={content} />
           </div>
           <div className="mt-8 border-t border-slate-100 pt-5 flex items-center justify-between text-xs text-slate-400">
             <span>Last updated: {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>

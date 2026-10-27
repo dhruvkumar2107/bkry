@@ -307,7 +307,7 @@ async function main() {
     shopName: 'Chotulal Sweets',
     tagline: 'Fresh Sweets, Made with Love',
     address: 'Bijapur Locality, Karnataka',
-    contactPhone: '+919000000000',
+    contactPhone: '+919741857227',
     openTime: '08:00',
     closeTime: '22:00',
     deliveryFee: 30,
@@ -320,11 +320,31 @@ async function main() {
     guestCheckoutEnabled: true,
     deliveryZones: 'Bijapur Locality, Bijapur',
   };
+  // Seed runs on every deploy, so only create missing keys and never overwrite
+  // values the admin has edited.
   for (const [key, value] of Object.entries(settings)) {
     await prisma.shopSetting.upsert({
       where: { key },
-      update: { value: JSON.stringify(value) },
+      update: {},
       create: { key, value: JSON.stringify(value) },
+    });
+  }
+
+  // Replace the old placeholder contact details left behind by earlier seeds.
+  const placeholderFixes = {
+    contactPhone: ['+919000000000', '+91 90000 00000'],
+    socialWhatsapp: ['+919000000000', '+91 90000 00000'],
+    contactEmail: ['info@chotulalsweets.com'],
+  };
+  const realValues = {
+    contactPhone: '+919741857227',
+    socialWhatsapp: '+919741857227',
+    contactEmail: 'chotulalsweets@gmail.com',
+  };
+  for (const [key, oldValues] of Object.entries(placeholderFixes)) {
+    await prisma.shopSetting.updateMany({
+      where: { key, value: { in: oldValues.map((v) => JSON.stringify(v)) } },
+      data: { value: JSON.stringify(realValues[key]) },
     });
   }
 

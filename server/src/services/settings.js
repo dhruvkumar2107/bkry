@@ -17,8 +17,8 @@ export const DEFAULT_SETTINGS = {
 
   // Contact & Store Hours
   address: 'Bijapur Locality, Chotulal Sweets',
-  contactPhone: '+919000000000',
-  contactEmail: 'info@chotulalsweets.com',
+  contactPhone: '+919741857227',
+  contactEmail: 'chotulalsweets@gmail.com',
   openTime: '08:00',
   closeTime: '22:00',
   deliveryZones: 'Bijapur Locality, Bijapur',
@@ -65,7 +65,7 @@ export const DEFAULT_SETTINGS = {
   // Social & SEO
   socialInstagram: 'https://instagram.com',
   socialFacebook: 'https://facebook.com',
-  socialWhatsapp: '+919000000000',
+  socialWhatsapp: '+919741857227',
   socialTwitter: '',
   metaTitle: 'Chotulal Sweets - Pure Ghee Sweets & Savouries',
   metaDescription: 'Order fresh handcrafted Indian sweets, pure ghee delicacies, crispy namkeen, and festival gift packs online from Chotulal Sweets.',
