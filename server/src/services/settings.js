@@ -78,7 +78,7 @@ export const DEFAULT_SETTINGS = {
 // Bump CONTENT_VERSION after changing any of these defaults to push them to the
 // live database once on the next deploy (see prisma/seed.js). Admin edits made
 // afterwards are kept.
-export const CONTENT_VERSION = 2;
+export const CONTENT_VERSION = 3;
 export const VERSIONED_CONTENT_KEYS = [
   'address',
   'contactPhone',
@@ -86,6 +86,9 @@ export const VERSIONED_CONTENT_KEYS = [
   'socialWhatsapp',
   'deliveryFee',
   'freeDeliveryAbove',
+  'taxEnabled',
+  'taxPercent',
+  'codEnabled',
   'aboutUsTitle',
   'aboutUsContent',
   'deliveryPolicy',

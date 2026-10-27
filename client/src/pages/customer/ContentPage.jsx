@@ -150,7 +150,7 @@ export default function ContentPage() {
     { question: 'What are your delivery hours?', answer: 'We deliver daily between 8:00 AM and 10:00 PM.' },
     { question: 'Do you use 100% pure ghee?', answer: 'Yes, all our authentic traditional sweets are crafted with pure desi ghee.' },
     { question: 'How can I track my order?', answer: 'Once you place an order, you will receive a tracking link and live updates on your order tracking page.' },
-    { question: 'What payment methods are supported?', answer: 'We support online payments (Cards, UPI, Netbanking) via Razorpay as well as Cash on Delivery.' },
+    { question: 'What payment methods are supported?', answer: 'We support online payments (Cards, UPI, Netbanking) via Razorpay. Cash on Delivery is not available.' },
   ];
 
   const handleContactSubmit = async (e) => {
