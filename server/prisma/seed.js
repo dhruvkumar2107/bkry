@@ -307,7 +307,7 @@ async function main() {
     shopName: 'Chotulal Sweets',
     tagline: 'Fresh Sweets, Made with Love',
     address: 'Bijapur Locality, Karnataka',
-    contactPhone: '+91 90000 00000',
+    contactPhone: '+919000000000',
     openTime: '08:00',
     closeTime: '22:00',
     deliveryFee: 30,
