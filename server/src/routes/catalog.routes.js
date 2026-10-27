@@ -309,6 +309,7 @@ router.get(
         deliveryPolicy: s.deliveryPolicy,
         returnPolicy: s.returnPolicy,
         termsConditions: s.termsConditions,
+        policyEffectiveDate: s.policyEffectiveDate,
         privacyPolicy: s.privacyPolicy,
         faqList: s.faqList || [],
         socialInstagram: s.socialInstagram,

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Phone, MapPin, Clock, Instagram, Facebook, MessageCircle, Mail, Twitter } from 'lucide-react';
+import { to12h } from '../lib/format.js';
 
 export default function Footer({ settings = {} }) {
   const shopName = settings?.shopName || 'Chotulal Sweets';
@@ -124,7 +125,7 @@ export default function Footer({ settings = {} }) {
             )}
             <li className="flex items-center gap-2">
               <Clock className="h-4 w-4 shrink-0 text-brand-600" />
-              <span>{settings?.openTime || '08:00'} – {settings?.closeTime || '22:00'}</span>
+              <span>{to12h(settings?.openTime || '08:00')} – {to12h(settings?.closeTime || '22:00')}, all 7 days</span>
             </li>
           </ul>
         </div>

@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS = {
   announcementBarLink: '/products',
 
   // Contact & Store Hours
-  address: 'Bijapur Locality, Chotulal Sweets',
+  address: 'Ram Mandir Road, Vijayapur, Karnataka 586101, India',
   contactPhone: '+919741857227',
   contactEmail: 'chotulalsweets@gmail.com',
   openTime: '08:00',
@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
 
   // Pricing, Tax & Delivery Charges
   deliveryFee: 40,
+  freeDeliveryAbove: 999,
   minOrderAmount: 0,
   taxPercent: 0,
   taxEnabled: false,
@@ -52,6 +53,8 @@ export const DEFAULT_SETTINGS = {
   termsConditions:
     '### General\nBy accessing or placing an order through the Chotulal Sweets website, customers agree to these terms and the applicable policies published on the website.\n\n### Products and Quality\nWe make reasonable efforts to display accurate product descriptions, images, and prices. Actual product appearance may vary slightly from photographs.\n\n### Orders and Payments\nOrders are subject to product availability and successful payment or confirmation through the supported payment method. Customers should check their order details before confirming a purchase.\n\n### Pricing and Delivery\nPrices and applicable delivery charges are displayed during checkout. Orders below ₹999 incur a ₹40 delivery charge, while orders of ₹999 or more qualify for free delivery, subject to applicable service conditions.\n\n### Returns and Refunds\nDelivered orders are not eligible for ordinary returns or refunds. Verified cases involving damaged, incorrect, or improperly fulfilled orders will be reviewed according to the published policy and applicable law.\n\n### Customer Responsibilities\nCustomers must provide accurate contact, delivery, and order information.\n\n### Website Use\nCustomers must not misuse the website, interfere with its operation, or engage in fraudulent transactions.\n\n### Changes to Terms\nChotulal Sweets may update its website policies when necessary. Updates should be published with an appropriate effective date.',
 
+  // Effective date shown on the policy pages; update it whenever the policies change.
+  policyEffectiveDate: '27 October 2026',
   privacyPolicy:
     'At Chotu Lal Sweets, we value and respect your privacy. We only collect the minimal personal information (such as your name, mobile number, and delivery address) necessary to fulfill your orders and keep you updated on delivery status. We never sell or share your personal data with third-party marketers.',
   faqList: [
@@ -71,6 +74,26 @@ export const DEFAULT_SETTINGS = {
   metaDescription: 'Order fresh handcrafted Indian sweets, pure ghee delicacies, crispy namkeen, and festival gift packs online from Chotulal Sweets.',
   metaKeywords: 'sweets, mithai, kaju katli, peda, laddu, namkeen, chotulal sweets, bijapur',
 };
+
+// Bump CONTENT_VERSION after changing any of these defaults to push them to the
+// live database once on the next deploy (see prisma/seed.js). Admin edits made
+// afterwards are kept.
+export const CONTENT_VERSION = 2;
+export const VERSIONED_CONTENT_KEYS = [
+  'address',
+  'contactPhone',
+  'contactEmail',
+  'socialWhatsapp',
+  'deliveryFee',
+  'freeDeliveryAbove',
+  'aboutUsTitle',
+  'aboutUsContent',
+  'deliveryPolicy',
+  'returnPolicy',
+  'termsConditions',
+  'policyEffectiveDate',
+  'faqList',
+];
 
 const SETTINGS_COLUMNS = new Set(Object.keys(DEFAULT_SETTINGS));
 

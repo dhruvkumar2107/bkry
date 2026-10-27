@@ -1,6 +1,7 @@
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+import { DEFAULT_SETTINGS, CONTENT_VERSION, VERSIONED_CONTENT_KEYS } from '../src/services/settings.js';
 
 const prisma = new PrismaClient();
 
@@ -306,12 +307,12 @@ async function main() {
   const settings = {
     shopName: 'Chotulal Sweets',
     tagline: 'Fresh Sweets, Made with Love',
-    address: 'Bijapur Locality, Karnataka',
+    address: DEFAULT_SETTINGS.address,
     contactPhone: '+919741857227',
     openTime: '08:00',
     closeTime: '22:00',
-    deliveryFee: 30,
-    freeDeliveryAbove: 500,
+    deliveryFee: DEFAULT_SETTINGS.deliveryFee,
+    freeDeliveryAbove: DEFAULT_SETTINGS.freeDeliveryAbove,
     minOrderAmount: 0,
     taxPercent: 5,
     taxEnabled: true,
@@ -330,22 +331,19 @@ async function main() {
     });
   }
 
-  // Replace the old placeholder contact details left behind by earlier seeds.
-  const placeholderFixes = {
-    contactPhone: ['+919000000000', '+91 90000 00000'],
-    socialWhatsapp: ['+919000000000', '+91 90000 00000'],
-    contactEmail: ['info@chotulalsweets.com'],
-  };
-  const realValues = {
-    contactPhone: '+919741857227',
-    socialWhatsapp: '+919741857227',
-    contactEmail: 'chotulalsweets@gmail.com',
-  };
-  for (const [key, oldValues] of Object.entries(placeholderFixes)) {
-    await prisma.shopSetting.updateMany({
-      where: { key, value: { in: oldValues.map((v) => JSON.stringify(v)) } },
-      data: { value: JSON.stringify(realValues[key]) },
-    });
+  // Push the current site content (policies, About Us, FAQs, contact details,
+  // delivery charges) to the database once per CONTENT_VERSION.
+  const versionRow = await prisma.shopSetting.findUnique({ where: { key: 'contentVersion' } });
+  if (Number(versionRow ? JSON.parse(versionRow.value) : 0) < CONTENT_VERSION) {
+    for (const key of [...VERSIONED_CONTENT_KEYS, 'contentVersion']) {
+      const value = key === 'contentVersion' ? CONTENT_VERSION : DEFAULT_SETTINGS[key];
+      await prisma.shopSetting.upsert({
+        where: { key },
+        update: { value: JSON.stringify(value) },
+        create: { key, value: JSON.stringify(value) },
+      });
+    }
+    console.log(`Site content updated to version ${CONTENT_VERSION}`);
   }
 
   console.log(`Seed complete. Categories: ${CATEGORIES.length}, new products: ${count}`);

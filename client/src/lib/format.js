@@ -66,3 +66,10 @@ export const STATUS_COLORS = {
 // Bundled branded fallback shown when a photograph is missing or fails to load.
 // Served as a static asset so it never depends on the network or the DB.
 export const PLACEHOLDER = '/images/fallback.svg';
+
+// "08:00" -> "8:00 AM"
+export const to12h = (t) => {
+  const [h, m] = String(t || '').split(':').map(Number);
+  if (Number.isNaN(h)) return t;
+  return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};

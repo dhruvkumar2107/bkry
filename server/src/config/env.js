@@ -64,8 +64,8 @@ export const env = {
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
 
   defaults: {
-    deliveryFee: num(process.env.DELIVERY_FEE, 30),
-    freeDeliveryAbove: num(process.env.FREE_DELIVERY_ABOVE, 500),
+    deliveryFee: num(process.env.DELIVERY_FEE, 40),
+    freeDeliveryAbove: num(process.env.FREE_DELIVERY_ABOVE, 999),
     minOrderAmount: num(process.env.MIN_ORDER_AMOUNT, 0),
     taxPercent: num(process.env.TAX_PERCENT, 5),
   },

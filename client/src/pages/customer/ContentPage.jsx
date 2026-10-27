@@ -3,44 +3,43 @@ import { useLocation, Link } from 'react-router-dom';
 import { ChevronDown, Phone, Mail, MapPin, Clock, ShieldCheck, Truck, RefreshCw, HelpCircle, FileText, XCircle, MessageCircle } from 'lucide-react';
 import api, { apiError } from '../../lib/api.js';
 import { PageLoader } from '../../components/ui.jsx';
+import ProductCard from '../../components/ProductCard.jsx';
+import { to12h } from '../../lib/format.js';
 
-function BranchCard({ name, address, phone, email, googleMaps }) {
+function BranchCard({ label, address, mapQuery }) {
   return (
-    <div className="card p-6 sm:p-8 bg-cream-50 border border-cream-200 rounded-xl hover:border-brand-300 transition">
-      <h3 className="font-bold text-slate-800 text-sm sm:text-base mb-3">{name}</h3>
-      <address className="text-sm text-slate-600 line-clamp-3">
-        {address}
+    <div className="card p-5 sm:p-6">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-brand-600">{label}</p>
+      <h3 className="mt-1 font-bold text-slate-800">Chotulal Sweets</h3>
+      <address className="mt-2 flex items-start gap-2 text-sm not-italic text-slate-600">
+        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+        <span>{address}</span>
       </address>
-      <div className="mt-3 flex gap-2">
-        <a
-          href={`tel:${phone.replace(/\s+/g, '')}`}
-          className="flex items-center gap-1.5 text-brand-700 hover:underline transition"
-        >
-          <Phone className="h-4 w-4" />
-          {phone}
-        </a>
-        <a
-          href={`mailto:${email}`}
-          className="flex items-center gap-1.5 text-brand-700 hover:underline transition"
-        >
-          <Mail className="h-4 w-4" />
-          {email}
-        </a>
-      </div>
-      <div className="mt-3">
-        <a
-          href={googleMaps}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-brand-600 hover:underline transition flex items-center gap-1.5"
-        >
-          <MapPin className="h-3 w-3" />
-          View on Google Maps
-        </a>
-      </div>
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-block text-xs font-semibold text-brand-700 hover:underline"
+      >
+        Search on Google Maps →
+      </a>
     </div>
   );
 }
+
+const BRANCHES = [
+  { label: 'Main Branch', address: 'Ram Mandir Road, Vijayapur, Karnataka 586101, India.', mapQuery: 'Chotulal Sweets, Ram Mandir Road, Vijayapur, Karnataka 586101' },
+  { label: 'Second Branch', address: 'Opposite District Court, Ustad Complex, Vijayapur, Karnataka 586101, India.', mapQuery: 'Chotulal Sweets, Ustad Complex, Opposite District Court, Vijayapur, Karnataka 586101' },
+];
+
+// Products featured on the About Us page.
+const SIGNATURE_SLUGS = ['special-peda', 'makhan-peda'];
+
+// "+919741857227" -> "97418 57227"
+const displayPhone = (p) => {
+  const digits = String(p || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+  return digits.length === 10 ? `${digits.slice(0, 5)} ${digits.slice(5)}` : p;
+};
 
 // Renders the light markdown used in CMS content: "## "/"### " headings,
 // "- " bullet lists, **bold** and blank-line separated paragraphs.
@@ -95,6 +94,7 @@ export default function ContentPage() {
   });
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactError, setContactError] = useState('');
+  const [signature, setSignature] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -102,6 +102,13 @@ export default function ContentPage() {
       .then(({ data }) => setSettings(data.settings))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (pathname !== '/about') return;
+    Promise.all(
+      SIGNATURE_SLUGS.map((slug) => api.get(`/catalog/products/${slug}`).then(({ data }) => data.product).catch(() => null))
+    ).then((products) => setSignature(products.filter(Boolean)));
+  }, [pathname]);
 
   if (loading) return <PageLoader label="Loading content…" />;
 
@@ -274,7 +281,7 @@ export default function ContentPage() {
                   <div>
                     <p className="font-semibold text-slate-800">Phone</p>
                     <a href={`tel:${settings?.contactPhone || '+919741857227'}`} className="text-brand-700 hover:underline">
-                      {settings?.contactPhone || '+91 97418 57227'}
+                      {displayPhone(settings?.contactPhone || '+919741857227')}
                     </a>
                   </div>
                 </div>
@@ -295,28 +302,15 @@ export default function ContentPage() {
                   <Clock className="h-5 w-5 shrink-0 text-brand-600 mt-0.5" />
                   <div>
                     <p className="font-semibold text-slate-800">Business Hours</p>
-                    <p>{settings?.openTime || '08:00'} – {settings?.closeTime || '22:00'} (Open all 7 days)</p>
+                    <p>{to12h(settings?.openTime || '08:00')} to {to12h(settings?.closeTime || '22:00')}, all seven days of the week</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Branch Cards */}
-            <div className="space-y-4">
-              <BranchCard
-                name="Main Branch"
-                address="Ram Mandir Road, Vijayapur, Karnataka 586101"
-                phone="+91 97418 57227"
-                email="chotulalsweets@gmail.com"
-                googleMaps="https://www.google.com/maps/search/?q=Ram+Mandal+Road+Vijayapur+Karnataka+586101"
-              />
-              <BranchCard
-                name="Second Branch"
-                address="Opposite District Court, Ustad Complex, Vijayapur, Karnataka 586101"
-                phone="+91 97418 57227"
-                email="chotulalsweets@gmail.com"
-                googleMaps="https://www.google.com/maps/search/?q=Opposite+District+Court+Ustad+Complex+Vijayapur+Karnataka+586101"
-              />
+            <div className="mt-6 space-y-4">
+              {BRANCHES.map((b) => <BranchCard key={b.label} {...b} />)}
             </div>
           </div>
 
@@ -428,12 +422,22 @@ export default function ContentPage() {
             <RichText text={content} />
           </div>
           <div className="mt-8 border-t border-slate-100 pt-5 flex items-center justify-between text-xs text-slate-400">
-            <span>Last updated: {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+            <span>{cleanPath === 'about' ? '' : `Effective date: ${settings?.policyEffectiveDate || '27 October 2026'}`}</span>
             <Link to="/products" className="font-semibold text-brand-700 hover:underline">
               Continue Shopping →
             </Link>
           </div>
         </div>
+      )}
+
+      {cleanPath === 'about' && signature.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-brand text-xl font-bold sm:text-2xl">Our Signature Sweets</h2>
+          <p className="mt-1 text-sm text-slate-500">The Peda and Makhan Peda that Vijayapur has loved for generations.</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+            {signature.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
+        </section>
       )}
     </div>
   );
