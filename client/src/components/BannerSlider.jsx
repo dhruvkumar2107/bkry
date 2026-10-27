@@ -59,7 +59,7 @@ export default function BannerSlider({ banners = [] }) {
               {bn.subtitle && (
                 <span className="w-fit rounded-full bg-gold-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white [text-shadow:none] shadow-sm">{bn.subtitle}</span>
               )}
-              <h2 className="font-brand text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{bn.title}</h2>
+              <h2 className="font-brand text-2xl font-bold text-white leading-tight sm:text-3xl lg:text-4xl">{bn.title}</h2>
               {bn.description && <p className="line-clamp-2 max-w-md text-sm text-white/95 sm:text-base">{bn.description}</p>}
               {bn.ctaLabel && (
                 <span className="mt-1 w-fit rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold shadow-soft transition hover:bg-brand-700 [text-shadow:none]">{bn.ctaLabel}</span>
