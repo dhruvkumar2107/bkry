@@ -327,11 +327,12 @@ router.get(
   '/coupons/:code',
   asyncHandler(async (req, res) => {
     const coupon = await prisma.coupon.findUnique({ where: { code: req.params.code.toUpperCase() } });
-if (!coupon || !coupon.isActive) {
+    if (!coupon || !coupon.isActive) {
       return res.status(404).json({ success: false, error: 'Invalid coupon' });
     }
     res.json({ success: true, coupon: { code: coupon.code, type: coupon.type, value: coupon.value, minOrder: coupon.minOrder, description: coupon.description } });
   })
+);
 
 router.post(
   '/contact',
